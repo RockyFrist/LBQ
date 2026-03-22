@@ -1,226 +1,20 @@
-﻿import { CombatCard, DistanceCard, WeaponType, CardType } from '../types.js';
+﻿import { CombatCard, DistanceCard, CardType } from '../types.js';
 import { COMBAT_CARD_NAMES, DISTANCE_CARD_NAMES, WEAPON_NAMES, DISTANCE_NAMES,
-  gameConfig, WEAPON_ZONES, COMBAT_CARD_BASE, CARD_TYPE_MAP, WEAPON_EMOJI } from '../constants.js';
-import { getAvailableCombatCards, getAvailableDistanceCards, getCombatCardCost, getTotalCost } from '../engine/card-validator.js';
-import { getDisabledCards, getDamageModifier, getCostModifier, isAdvantage, isDisadvantage } from '../engine/weapon.js';
-import { getDistanceCardCost } from '../engine/distance.js';
-import { showSimulationModal } from '../simulator.js';
-import { showConfigModal } from './modals.js';
+  gameConfig, WEAPON_ZONES, COMBAT_CARD_BASE, CARD_TYPE_MAP, WEAPON_EMOJI, DISTANCE_CARD_BASE } from '../constants.js';
+import { getAvailableCombatCards, getAvailableDistanceCards } from '../engine/card-validator.js';
+import { getDamageModifier } from '../engine/weapon.js';
+import { getActiveTraits, explainCombatMatchup } from '../engine/combat-explain.js';
+import { buildGuideContent, buildRulesContent } from './tutorial-content.js';
+import { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS,
+  buildWeaponZoneStrip, buildWeaponSkillCards } from './weapon-display.js';
+export { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS };
 
-// ═══════ Display Constants ═══════
 
-export const COMBAT_CARD_INFO = {
-  [CombatCard.DODGE]:   { emoji: '💨', type: '防', desc: '回避攻击，成功时对手+1架势' },
-  [CombatCard.DEFLECT]: { emoji: '🤺', type: '防', desc: '反制劈砍/点刺，伤害+僵直' },
-  [CombatCard.SLASH]:   { emoji: '⚡', type: '攻', desc: '3伤害+1架势，高威力' },
-  [CombatCard.THRUST]:  { emoji: '🎯', type: '攻', desc: '1伤害+1架势，低消耗' },
-  [CombatCard.BLOCK]:   { emoji: '🛡️', type: '防', desc: '减免攻击伤害' },
-  [CombatCard.FEINT]:   { emoji: '🌀', type: '攻', desc: '0伤害+2架势，克格挡' },
-};
 
-export const DISTANCE_CARD_INFO = {
-  [DistanceCard.ADVANCE]: { emoji: '⬆️', desc: '间距-1' },
-  [DistanceCard.RETREAT]: { emoji: '⬇️', desc: '间距+1' },
-  [DistanceCard.HOLD]:    { emoji: '⏸️', desc: '不变' },
-};
 
-// ═══════ Weapon-Specific Movement Skills (未开发，仅展示) ═══════
-const WEAPON_SKILLS = {
-  [WeaponType.SHORT_BLADE]: [
-    { name: '贴身步', emoji: '👣', desc: '间距-1，贴身区额外减体力消耗' },
-  ],
-  [WeaponType.SPEAR]: [
-    { name: '撑杆退', emoji: '🔱', desc: '间距+1，阻止对手下回合靠近超过1格' },
-  ],
-  [WeaponType.SWORD]: [
-    { name: '游身换位', emoji: '🌊', desc: '间距不变，获得下回合优先结算权' },
-  ],
-  [WeaponType.STAFF]: [
-    { name: '拨草寻蛇', emoji: '🐍', desc: '间距+1，并给对手+1架势' },
-  ],
-  [WeaponType.GREAT_BLADE]: [
-    { name: '沉肩带步', emoji: '🏋️', desc: '间距-1，下回合劈砍消耗-1' },
-  ],
-  [WeaponType.DUAL_STAB]: [
-    { name: '蛇行缠步', emoji: '🥢', desc: '间距-2，消耗2体力' },
-  ],
-};
 
-function buildWeaponSkillCards(weapon) {
-  const skills = WEAPON_SKILLS[weapon] || [];
-  return skills.map(skill => `
-    <div class="dist-card disabled weapon-skill-card" title="${skill.desc}（未开发）">
-      <span class="dc-emoji">${skill.emoji}</span>
-      <span class="dc-name">${skill.name}</span>
-      <span class="dc-cost">🔒</span>
-    </div>
-  `).join('');
-}
 
-// ═══════ Weapon Trait Descriptions ═══════
-const WEAPON_TRAITS = {
-  [WeaponType.SHORT_BLADE]: {
-    style: '近身突袭',
-    traits: [
-      '优势区点刺/劈砍+1伤',
-      '优势区闪避/点刺-1体力',
-      '优势区虚晃+1架势',
-      '远距劈砍不可用，远距-1伤',
-      '进步费用减半',
-    ],
-  },
-  [WeaponType.SPEAR]: {
-    style: '中远控距',
-    traits: [
-      '优势区劈砍+2伤',
-      '优势区格挡-1体力',
-      '贴身禁劈砍/卸力',
-      '贴身点刺-1伤',
-      '退步费用减半',
-    ],
-  },
-  [WeaponType.SWORD]: {
-    style: '均衡防反',
-    traits: [
-      '卸力成功不僵直，自身-2架势',
-      '优势区卸力/格挡-1体力',
-      '贴身禁劈砍，远距禁点刺/劈砍',
-      '贴身伤害-1',
-    ],
-  },
-  [WeaponType.STAFF]: {
-    style: '广域压制',
-    traits: [
-      '优势区虚晃+1架势',
-      '优势区格挡-1体力',
-      '优势区劈砍-1伤(轻击)',
-      '贴身禁劈砍，贴身-1伤',
-      '优势区覆盖近/中/远',
-    ],
-  },
-  [WeaponType.GREAT_BLADE]: {
-    style: '重击破防',
-    traits: [
-      '优势区劈砍+3伤(重斩)',
-      '优势区劈砍命中推开间距1',
-      '优势区格挡额外减2伤',
-      '贴身禁劈砍/卸力',
-      '劣势区点刺-1伤',
-    ],
-  },
-  [WeaponType.DUAL_STAB]: {
-    style: '贴身缠斗',
-    traits: [
-      '贴身命中任何卡额外+1架势',
-      '优势区点刺+1伤',
-      '优势区点刺/闪避-1体力',
-      '优势区虚晃+1架势',
-      '中距+禁劈砍/卸力，劣势-1伤',
-    ],
-  },
-};
 
-function buildWeaponTraits(weapon) {
-  const info = WEAPON_TRAITS[weapon];
-  if (!info) return '';
-  const zones = WEAPON_ZONES[weapon];
-  const advNames = zones.advantage.map(d => DISTANCE_NAMES[d]).join('、');
-  const disNames = zones.disadvantage.map(d => DISTANCE_NAMES[d]).join('、');
-  return `
-    <div class="weapon-info-box">
-      <div class="info-title">${WEAPON_EMOJI[weapon]} ${WEAPON_NAMES[weapon]} · ${info.style}</div>
-      <div class="info-adv">✦ 优势区: ${advNames}</div>
-      <div class="info-dis">✧ 劣势区: ${disNames}</div>
-      <div class="info-traits">
-        ${info.traits.map(t => `<div class="info-trait">• ${t}</div>`).join('')}
-      </div>
-    </div>
-  `;
-}
-
-export const FIGHTER_POSITIONS = {
-  0: { player: 42, ai: 58 },
-  1: { player: 35, ai: 65 },
-  2: { player: 24, ai: 76 },
-  3: { player: 12, ai: 88 },
-};
-
-// ═══════ Render: Setup Screen ═══════
-export function renderSetup(app, onStart) {
-  const defaultPlayer = WeaponType.SHORT_BLADE;
-  const defaultAi = WeaponType.SPEAR;
-  app.innerHTML = `
-    <div class="setup-screen">
-      <h1>⚔️ 冷刃博弈</h1>
-      <p class="subtitle">以「身法控距」为核心的回合制冷兵器对战</p>
-      <div class="setup-form">
-        <div class="setup-weapons">
-          <div class="setup-weapon-col">
-            <div class="setup-col-title">👤 你的兵器</div>
-            <select id="sel-player">
-              ${Object.entries(WEAPON_NAMES).map(([k, v]) =>
-                `<option value="${k}">${WEAPON_EMOJI[k] || ''} ${v}</option>`
-              ).join('')}
-            </select>
-            <div id="player-traits">${buildWeaponTraits(defaultPlayer)}</div>
-          </div>
-          <div class="setup-vs">⚔</div>
-          <div class="setup-weapon-col">
-            <div class="setup-col-title">🤖 对手兵器</div>
-            <select id="sel-ai">
-              ${Object.entries(WEAPON_NAMES).map(([k, v]) =>
-                `<option value="${k}">${WEAPON_EMOJI[k] || ''} ${v}</option>`
-              ).join('')}
-            </select>
-            <div id="ai-traits">${buildWeaponTraits(defaultAi)}</div>
-          </div>
-        </div>
-        <div class="setup-row setup-row-center">
-          <label>AI 难度</label>
-          <select id="sel-level">
-            <option value="1">1 - 纯随机</option>
-            <option value="2">2 - 基础规则</option>
-            <option value="3" selected>3 - 简单策略</option>
-            <option value="4">4 - 普通策略</option>
-            <option value="5">5 - 高级策略</option>
-            <option value="6">6 - 顶级高手</option>
-          </select>
-        </div>
-        <button class="btn-start" id="btn-start">开始对局</button>
-        <div class="setup-btns-row">
-          <button class="btn-sim" id="btn-sim">📊 对战模拟</button>
-          <button class="btn-sim" id="btn-config">⚙️ 参数配置</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('sel-ai').value = defaultAi;
-
-  // Update weapon traits on selection change
-  document.getElementById('sel-player').addEventListener('change', e => {
-    document.getElementById('player-traits').innerHTML = buildWeaponTraits(e.target.value);
-  });
-  document.getElementById('sel-ai').addEventListener('change', e => {
-    document.getElementById('ai-traits').innerHTML = buildWeaponTraits(e.target.value);
-  });
-
-  document.getElementById('btn-start').addEventListener('click', () => {
-    onStart(
-      document.getElementById('sel-player').value,
-      document.getElementById('sel-ai').value,
-      parseInt(document.getElementById('sel-level').value)
-    );
-  });
-
-  document.getElementById('btn-sim').addEventListener('click', () => {
-    showSimulationModal();
-  });
-
-  document.getElementById('btn-config').addEventListener('click', () => {
-    showConfigModal();
-  });
-}
 
 // ═══════ Render: Game Main UI ═══════
 export function renderGame(app, state, selection, uiState, callbacks) {
@@ -235,7 +29,7 @@ export function renderGame(app, state, selection, uiState, callbacks) {
       ${buildBottomBar()}
     </div>
     ${buildTutorialModal()}
-    ${buildRulesModal()}
+    ${buildRoundDetailModal()}
   `;
   app.innerHTML = html;
   bindAllEvents(state, selection, uiState, callbacks);
@@ -270,14 +64,8 @@ function buildPlayerPanel(state, selection) {
   const stagger = p.staggered ? '<span class="stagger-badge">⚠ 僵直</span>' : '';
 
   const availDist = getAvailableDistanceCards(p, dist);
-  const availCombat = getAvailableCombatCards(p, dist);
-
-  let totalCost = 0;
-  let costValid = true;
-  if (selection.distanceCard && selection.combatCard) {
-    totalCost = getTotalCost(selection.distanceCard, selection.combatCard, p, dist);
-    costValid = totalCost <= p.stamina;
-  }
+  const reservedStamina = selection.distanceCard ? (DISTANCE_CARD_BASE[selection.distanceCard]?.cost ?? 0) : 0;
+  const availCombat = getAvailableCombatCards(p, dist, reservedStamina);
 
   return `
     <div class="side-panel player-side">
@@ -287,13 +75,9 @@ function buildPlayerPanel(state, selection) {
         <span class="weapon-badge">${WEAPON_EMOJI[p.weapon] || ''} ${WEAPON_NAMES[p.weapon]}</span>
       </div>
       ${buildStatBars(p, 'player')}
-      ${buildWeaponTraits(p.weapon)}
+      ${buildWeaponZoneStrip(p.weapon, state.distance)}
       <div class="divider"></div>
       <div class="card-sel-title">🃏 选择出牌</div>
-      <div class="cost-preview">
-        <span>消耗: <span class="${costValid ? 'cost-val' : 'cost-warn'}">${totalCost}</span></span>
-        <span>可用: <span class="cost-val">${p.stamina}</span> 体力</span>
-      </div>
       <div class="card-group-label">身法卡（必选）</div>
       <div class="cards-row">
         ${buildDistanceCards(state, selection, p, availDist)}
@@ -308,7 +92,7 @@ function buildPlayerPanel(state, selection) {
       </div>
       <button class="btn-confirm" id="btn-confirm"
         ${(!selection.distanceCard || !selection.combatCard) ? 'disabled' : ''}>
-        ${(selection.distanceCard && selection.combatCard && !costValid) ? '⚠ 体力不足' : '确认出牌'}
+        确认出牌
       </button>
     </div>
   `;
@@ -316,14 +100,11 @@ function buildPlayerPanel(state, selection) {
 
 function buildStatBars(p, side) {
   const MAX_HP = gameConfig.MAX_HP;
-  const MAX_STAMINA = gameConfig.MAX_STAMINA;
   const MAX_STANCE = gameConfig.MAX_STANCE;
-  const STAMINA_RECOVERY = gameConfig.STAMINA_RECOVERY;
-  const recoveryText = `<span class="stamina-recovery">回合结束+${STAMINA_RECOVERY}</span>`;
+  const MAX_STAMINA = gameConfig.MAX_STAMINA;
   return `
     ${buildOneBar('❤️ 气血', 'hp', p.hp, MAX_HP)}
-    ${buildOneBar('💪 体力', 'stamina', p.stamina, MAX_STAMINA)}
-    ${recoveryText}
+    ${buildOneBar('💨 体力', 'stamina', p.stamina, MAX_STAMINA, false)}
     ${buildOneBar('⚡ 架势', 'stance', p.stance, MAX_STANCE, p.stance >= 4)}
   `;
 }
@@ -349,13 +130,11 @@ function buildDistanceCards(state, selection, projected, availDist) {
     const avail = availDist.includes(card);
     const sel = selection.distanceCard === card;
     const info = DISTANCE_CARD_INFO[card];
-    const streak = p.distanceCardStreak.card === card ? p.distanceCardStreak.count : 0;
-    const cost = getDistanceCardCost(card, streak, p.weapon, dist, WEAPON_ZONES);
+    const cost = DISTANCE_CARD_BASE[card]?.cost ?? 0;
 
-    // Build tooltip
     const tips = [info.desc];
-    if (streak > 0) tips.push(`连续${streak+1}次，费用+${streak}`);
-    if (!avail && cost > p.stamina) tips.push(`⚠ 体力不足(需${cost}，剩${p.stamina})`);
+    if (cost > 0) tips.push(`耗${cost}体力`);
+    if (!avail && cost > 0 && p.stamina < cost) tips.push(`⛔ 体力不足（需要${cost}）`);
     const tooltip = tips.join('\n');
 
     return `
@@ -363,45 +142,42 @@ function buildDistanceCards(state, selection, projected, availDist) {
            data-type="distance" data-card="${card}" title="${tooltip}">
         <span class="dc-emoji">${info.emoji}</span>
         <span class="dc-name">${DISTANCE_CARD_NAMES[card]}</span>
-        <span class="dc-cost">${cost}体</span>
+        ${cost > 0 ? `<span class="dc-cost">${cost}体</span>` : ''}
       </div>
     `;
   }).join('');
 }
 
-function getCardDisableReason(card, weapon, distance, stamina, cost, staggered) {
-  const disabled = getDisabledCards(weapon, distance);
-  if (disabled.includes(card)) return `⛔ ${WEAPON_NAMES[weapon]}在间距${distance}不可用`;
+function getCardDisableReason(card, weapon, distance, staggered, stamina, reservedStamina) {
   if (staggered && CARD_TYPE_MAP[card] === CardType.ATTACK) return '⛔ 僵直中，无法使用攻击';
-  if (cost > stamina) return `⚠ 体力不足(需${cost}，剩${stamina})`;
   return '';
 }
 
 function buildCombatCards(state, selection, projected, availCombat) {
   const p = state.player;
   const dist = state.distance;
+  const reservedStamina = selection.distanceCard ? (DISTANCE_CARD_BASE[selection.distanceCard]?.cost ?? 0) : 0;
   return Object.values(CombatCard).map(card => {
     const avail = availCombat.includes(card);
     const sel = selection.combatCard === card;
     const info = COMBAT_CARD_INFO[card];
     const base = COMBAT_CARD_BASE[card];
-    const streak = p.combatCardStreak.card === card ? p.combatCardStreak.count : 0;
-    const cost = getCombatCardCost(card, streak, p.weapon, dist);
     const typeCls = info.type === '攻' ? 'atk' : 'def';
 
     // Build rich tooltip
     const tips = [info.desc];
     const dmgMod = getDamageModifier(p.weapon, dist, card);
-    const costMod = getCostModifier(p.weapon, dist, card);
     if (dmgMod > 0) tips.push(`📈 优势区加成：伤害+${dmgMod}`);
-    if (dmgMod < 0) tips.push(`📉 劣势区减益：伤害${dmgMod}`);
-    if (costMod < 0) tips.push(`💰 优势区减费：费用${costMod}`);
-    if (streak > 0) tips.push(`🔄 连续${streak+1}次，费用+${streak}`);
-    if (!avail) tips.push(getCardDisableReason(card, p.weapon, dist, p.stamina, cost, p.staggered));
+    if (dmgMod < 0 && dmgMod >= -2) tips.push(`📉 劣势区减益：伤害${dmgMod}`);
+    if (dmgMod <= -3) tips.push(`⚠️ 距离不佳：伤害${dmgMod}，几乎无效`);
+    if (!avail) tips.push(getCardDisableReason(card, p.weapon, dist, p.staggered, p.stamina, reservedStamina));
     const tooltip = tips.join('\n');
 
+    // "weak" class for heavily penalized cards (dmg reduced to 0)
+    const weakCls = (dmgMod <= -3 && base.damage > 0) ? 'cc-weak' : '';
+
     return `
-      <div class="combat-card ${sel ? 'selected' : ''} ${!avail ? 'disabled' : ''}"
+      <div class="combat-card ${sel ? 'selected' : ''} ${!avail ? 'disabled' : ''} ${weakCls}"
            data-type="combat" data-card="${card}" title="${tooltip}">
         <div class="cc-top">
           <span class="cc-emoji">${info.emoji}</span>
@@ -410,10 +186,11 @@ function buildCombatCards(state, selection, projected, availCombat) {
         </div>
         <div class="cc-desc">${info.desc}</div>
         <div class="cc-footer">
-          <span>${cost}体</span>
+          <span>伤${base.damage}</span>
           <span>P${base.priority}</span>
           ${dmgMod !== 0 ? `<span class="cc-mod ${dmgMod > 0 ? 'buff' : 'nerf'}">${dmgMod > 0 ? '+' : ''}${dmgMod}伤</span>` : ''}
         </div>
+        ${weakCls ? '<div class="cc-weak-tag">⚠ 距离不佳</div>' : ''}
       </div>
     `;
   }).join('');
@@ -424,11 +201,11 @@ function buildCenterArea(state, uiState) {
     <div class="center-area">
       ${uiState.isPaused ? '<div class="paused-banner">⏸ 游戏已暂停 — 点击「继续」恢复</div>' : ''}
       ${buildSituationHint(state)}
-      ${buildDistanceZones(state)}
       <div class="arena-wrapper">
         ${buildBattleArena(state)}
         ${buildLastRoundResult(state)}
       </div>
+      ${buildArenaZoneRibbon(state)}
       ${buildBattleLog(state)}
     </div>
   `;
@@ -447,13 +224,13 @@ function buildSituationHint(state) {
   const hints = [];
 
   if (pInAdv && !aInAdv) {
-    hints.push('✅ 你在优势间距！攻击伤害加成、消耗减免');
+    hints.push('✅ 你在优势间距！攻击伤害加成');
   } else if (aInAdv && !pInAdv) {
     hints.push('⚠️ 对手在优势间距！考虑用身法调整间距');
   } else if (pInAdv && aInAdv) {
     hints.push('⚔️ 双方都在优势区，正面较量！');
   } else if (pInDis) {
-    hints.push('❌ 你在劣势区，快用身法调整间距！');
+    hints.push('❌ 你在劣势区，攻击受削弱！');
   }
 
   if (p.stance >= 4) {
@@ -462,8 +239,10 @@ function buildSituationHint(state) {
     hints.push('🟢 对手架势快满了！攻击/虚晃可触发处决');
   }
 
-  if (p.stamina <= 2) {
-    hints.push('💤 体力不足，考虑用低消耗牌');
+  if (p.stamina <= 1) {
+    hints.push('🔋 体力不足！只能扎马，无法进退');
+  } else if (ai.stamina <= 1) {
+    hints.push('🎯 对手体力不足！无法移动，趁机调整间距');
   }
 
   if (p.staggered) {
@@ -477,39 +256,39 @@ function buildSituationHint(state) {
     hints.push('💡 选择1张身法卡 + 1张攻防卡，点确认出牌');
   }
 
-  return `<div class="situation-hint">${hints.join('<span class="hint-sep">|</span>')}</div>`;
+  // Build weapon trait activation tags
+  const traits = getActiveTraits(p.weapon, dist);
+  const traitHtml = traits.length > 0
+    ? `<div class="trait-tags">${traits.map(t => `<span class="trait-tag ${t.cls}">${t.icon} ${t.text}</span>`).join('')}</div>`
+    : '';
+
+  return `<div class="situation-hint">${hints.join('<span class="hint-sep">|</span>')}</div>${traitHtml}`;
 }
 
-function buildDistanceZones(state) {
+function buildArenaZoneRibbon(state) {
   const pZones = WEAPON_ZONES[state.player.weapon];
   const aZones = WEAPON_ZONES[state.ai.weapon];
+  const dist = state.distance;
 
-  const cells = [0, 1, 2, 3].map(d => {
-    const isCurrent = d === state.distance;
-    const pAdv = pZones.advantage.includes(d);
-    const aAdv = aZones.advantage.includes(d);
-
-    let cls = 'zone-cell';
-    if (isCurrent) cls += ' current';
-    if (pAdv && !aAdv) cls += ' player-adv';
-    if (aAdv && !pAdv) cls += ' ai-adv';
-
-    return `
-      <div class="${cls}">
-        <div class="zone-name">${DISTANCE_NAMES[d]}</div>
-        ${isCurrent ? '<div class="zone-marker">⚔</div>' : ''}
-        <div class="zone-tags">
-          ${pAdv ? '<span class="zone-tag ptag">★玩家</span>' : ''}
-          ${aAdv ? '<span class="zone-tag atag">★AI</span>' : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
+  const buildRow = (label, zones) => {
+    const cells = [0, 1, 2, 3].map(d => {
+      const isAdv = zones.advantage.includes(d);
+      const isDis = zones.disadvantage.includes(d);
+      const isCur = d === dist;
+      let cls = 'azr-cell';
+      if (isAdv) cls += ' azr-adv';
+      else if (isDis) cls += ' azr-dis';
+      if (isCur) cls += ' azr-current';
+      const mark = isAdv ? '★' : isDis ? '✗' : '';
+      return `<span class="${cls}">${mark}${DISTANCE_NAMES[d]}</span>`;
+    }).join('');
+    return `<div class="azr-row"><span class="azr-label">${label}</span>${cells}</div>`;
+  };
 
   return `
-    <div class="distance-zones">
-      <div class="zone-header">📍 间距控制区</div>
-      <div class="zone-bar">${cells}</div>
+    <div class="arena-zone-ribbon">
+      ${buildRow('👤', pZones)}
+      ${buildRow('🤖', aZones)}
     </div>
   `;
 }
@@ -529,7 +308,9 @@ function buildBattleArena(state) {
   return `
     <div class="battle-arena">
       <div class="arena-title">⚔️ 战斗场景</div>
-      <div class="arena-stage" id="arena-stage">
+      <div class="arena-stage dist-${state.distance}" id="arena-stage" style="--arena-cam:${state.distance}">
+        <div class="arena-parallax-far"></div>
+        <div class="arena-parallax-mid"></div>
         <div class="arena-dist-label">${DISTANCE_NAMES[state.distance]}</div>
         <div class="arena-dist-line" style="left:${lineLeft}%;width:${lineWidth}%"></div>
         <div class="fighter player-fighter" id="player-fighter" style="left:${pos.player}%">
@@ -543,8 +324,8 @@ function buildBattleArena(state) {
         </div>
         <div class="fighter ai-fighter" id="ai-fighter" style="left:${pos.ai}%">
           <div class="fighter-weapon-icon">${WEAPON_EMOJI[state.ai.weapon] || '🔱'}</div>
-          <div class="fighter-body">${state.ai.staggered ? '😵' : '🤖'}</div>
-          <div class="fighter-label">AI</div>
+          <div class="fighter-body">${state.ai.staggered ? '😵' : (state.aiName ? '👤' : '🤖')}</div>
+          <div class="fighter-label">${state.aiName || 'AI'}</div>
           <div class="mini-bars">
             <div class="mini-bar"><div class="mini-bar-fill hp-a" style="width:${aHpPct}%"></div></div>
             <div class="mini-bar"><div class="mini-bar-fill stance-f" style="width:${aStPct}%"></div></div>
@@ -602,12 +383,12 @@ function buildAiPanel(state) {
   return `
     <div class="side-panel ai-side">
       <div class="panel-header">
-        <span class="panel-icon">🤖</span>
-        <span class="panel-name">AI ${stagger}</span>
+        <span class="panel-icon">${state.aiName ? '👤' : '🤖'}</span>
+        <span class="panel-name">${state.aiName || 'AI'} ${stagger}</span>
         <span class="weapon-badge">${WEAPON_EMOJI[ai.weapon] || ''} ${WEAPON_NAMES[ai.weapon]}</span>
       </div>
       ${buildStatBars(ai, 'ai')}
-      ${buildWeaponTraits(ai.weapon)}
+      ${buildWeaponZoneStrip(ai.weapon, state.distance)}
       <div class="divider"></div>
       ${buildAiLastAction(state)}
       <div class="divider"></div>
@@ -647,18 +428,20 @@ function buildHistoryPanel(state) {
     const aCombat = COMBAT_CARD_NAMES[h.aiCombat];
     const pEmoji = COMBAT_CARD_INFO[h.playerCombat] ? COMBAT_CARD_INFO[h.playerCombat].emoji : '';
     const aEmoji = COMBAT_CARD_INFO[h.aiCombat] ? COMBAT_CARD_INFO[h.aiCombat].emoji : '';
+    const interrupted = h.pMoveInterrupted ? ' 🔙' : '';
+    const aiInterrupted = h.aMoveInterrupted ? ' 🔙' : '';
     return `
-      <div class="history-item">
-        <div class="h-round">回合 ${i + 1}</div>
-        <div class="h-player">👤 ${pDist} + ${pEmoji} ${pCombat}</div>
-        <div class="h-ai">🤖 ${aDist} + ${aEmoji} ${aCombat}</div>
+      <div class="history-item history-clickable" data-round-idx="${i}" title="点击查看本回合详细解释">
+        <div class="h-round">回合 ${i + 1} <span class="h-explain-hint">🔍</span></div>
+        <div class="h-player">👤 ${pDist} + ${pEmoji} ${pCombat}${interrupted}</div>
+        <div class="h-ai">🤖 ${aDist} + ${aEmoji} ${aCombat}${aiInterrupted}</div>
       </div>
     `;
   }).reverse().join('');
 
   return `
     <div class="history-section">
-      <div class="history-title">📜 历史记录</div>
+      <div class="history-title">📜 历史记录 <span class="history-hint">点击回合查看详情</span></div>
       <div class="history-list" id="history-list">
         ${items || '<div class="history-item"><div class="h-detail">暂无记录</div></div>'}
       </div>
@@ -680,115 +463,143 @@ function buildBottomBar() {
   `;
 }
 
-// ─── Tutorial Modal ───
+// ─── Tutorial Modal (tabbed: 新手入门 / 完整规则) ───
 function buildTutorialModal() {
   return `
     <div class="modal-overlay" id="modal-tutorial">
-      <div class="modal-box">
+      <div class="modal-box modal-box-wide">
         <div class="modal-header">
-          <div class="modal-title">📚 新手引导</div>
-          <button class="modal-close" data-close="tutorial">关闭</button>
+          <div class="modal-tabs">
+            <button class="modal-tab active" data-tab="guide">📚 新手入门</button>
+            <button class="modal-tab" data-tab="rules">📖 完整规则</button>
+          </div>
+          <button class="modal-close" data-close="tutorial">✕</button>
         </div>
-        <div class="modal-content-text">
-          <h4>🎯 游戏目标</h4>
-          <p>将对手的气血值归零即可获胜！控制架势条，避免被处决（-5血）。</p>
+        <div class="modal-content-text tab-content active" id="tab-guide">
+          ${buildGuideContent()}
+        </div>
 
-          <h4>⚔️ 核心机制</h4>
-          <ul>
-            <li><strong>身法控距</strong>：不同兵器在不同间距有优势/劣势，身法控制是胜负的关键</li>
-            <li><strong>架势系统</strong>：被攻击/虚晃命中会增加架势值，满5触发处决扣5血</li>
-            <li><strong>体力系统</strong>：每回合恢复3体力，操作消耗体力，连续使用同一卡牌消耗递增</li>
-          </ul>
-
-          <h4>🃏 出牌流程</h4>
-          <ol>
-            <li>选择 <strong>1张身法卡</strong>：进步 / 退步 / 扎马</li>
-            <li>选择 <strong>1张攻防操作卡</strong>：闪避 / 卸力 / 劈砍 / 点刺 / 格挡 / 虚晃</li>
-            <li>点击 <strong>确认出牌</strong></li>
-            <li>系统自动结算：先身法，再攻防（按优先级）</li>
-          </ol>
-
-          <h4>🎴 卡牌说明</h4>
-          <ul>
-            <li><strong>💨 闪避</strong>（优先级1）：防守卡，回避攻击成功时对手+1架势</li>
-            <li><strong>🤺 卸力</strong>（优先级2）：防守卡，反制劈砍/点刺，造成2伤+僵直</li>
-            <li><strong>⚡ 劈砍</strong>（优先级3）：攻击卡，3伤害+1架势，高消耗</li>
-            <li><strong>🎯 点刺</strong>（优先级4）：攻击卡，1伤害+1架势，低消耗快出</li>
-            <li><strong>🛡️ 格挡</strong>（优先级5）：防守卡，减免劈砍/点刺伤害</li>
-            <li><strong>🌀 虚晃</strong>（优先级6）：攻击卡，0伤害但+2架势，克制格挡</li>
-          </ul>
-
-          <h4>🏹 兵器特性</h4>
-          <ul>
-            <li><strong>🗡️ 短刀</strong>：贴身+近战优势，闪避减免，点刺加伤</li>
-            <li><strong>🔱 长枪</strong>：中距+远距优势，劈砍加伤大，格挡减免</li>
-            <li><strong>⚔️ 剑</strong>：近战+中距优势，卸力不造成僵直改为减自身架势</li>
-            <li><strong>🏏 棍</strong>：近战+中距+远距优势（最宽），虚晃加成，但劈砍伤害-1</li>
-            <li><strong>🪓 大刀</strong>：仅中距优势，劈砍超高伤害+推开间距</li>
-          </ul>
-
-          <h4>💡 操作技巧</h4>
-          <ul>
-            <li>再次点击已选卡牌可取消选择</li>
-            <li>灰色卡牌表示不可用（间距/体力/僵直限制）</li>
-            <li>⏪ 回退按钮可撤销上一回合</li>
-            <li>关注架势值！ 架势满5会被处决扣5血</li>
-          </ul>
+        <!-- Tab: 完整规则 -->
+        <div class="modal-content-text tab-content" id="tab-rules">
+          ${buildRulesContent()}
         </div>
       </div>
     </div>
   `;
 }
 
-// ─── Rules Modal ───
-function buildRulesModal() {
+// ─── Round Detail Modal ───
+function buildRoundDetailModal() {
   return `
-    <div class="modal-overlay" id="modal-rules">
+    <div class="modal-overlay" id="modal-round-detail">
       <div class="modal-box">
         <div class="modal-header">
-          <div class="modal-title">📖 完整规则</div>
-          <button class="modal-close" data-close="rules">关闭</button>
+          <div class="modal-title" id="round-detail-title">🔍 回合详情</div>
+          <button class="modal-close" data-close="round-detail">关闭</button>
         </div>
-        <div class="modal-content-text">
-          <h4>📐 间距系统</h4>
-          <ul>
-            <li>4个间距区间：贴身区(0) → 近战区(1) → 中距区(2) → 远距区(3)</li>
-            <li>初始间距：中距区(2)</li>
-            <li>双方身法效果叠加：如玩家进步(-1) + AI退步(+1) = 间距不变</li>
-          </ul>
-
-          <h4>⚡ 体力系统</h4>
-          <ul>
-            <li>体力上限8，每回合恢复3（不超上限）</li>
-            <li>所有操作消耗体力，先扣体力再结算</li>
-            <li>连续使用同一卡牌，消耗逐回合+1</li>
-            <li>兵器在优势区有特定卡牌消耗减免</li>
-          </ul>
-
-          <h4>⚔️ 攻防结算（按优先级）</h4>
-          <ul>
-            <li>优先级：闪避(1) > 卸力(2) > 劈砍(3) > 点刺(4) > 格挡(5) > 虚晃(6)</li>
-            <li>卸力成功反制劈砍/点刺：造成反伤+僵直</li>
-            <li>格挡减免劈砍/点刺伤害</li>
-            <li>虚晃骗出格挡：+架势值</li>
-          </ul>
-
-          <h4>🎭 架势与处决</h4>
-          <ul>
-            <li>被攻击/虚晃命中会增加架势值</li>
-            <li>架势值达到5触发「处决」：扣5血 + 架势清零</li>
-            <li>架势管理是游戏核心策略之一</li>
-          </ul>
-
-          <h4>💫 僵直状态</h4>
-          <ul>
-            <li>被卸力成功反制后进入僵直</li>
-            <li>僵直状态持续1回合，期间所有攻击卡禁用</li>
-          </ul>
-        </div>
+        <div class="modal-content-text" id="round-detail-content"></div>
       </div>
     </div>
   `;
+}
+
+function showRoundExplanation(state, roundIdx) {
+  const h = state.history[roundIdx];
+  if (!h) return;
+
+  const pDistName = DISTANCE_CARD_NAMES[h.playerDistance];
+  const pCombatName = COMBAT_CARD_NAMES[h.playerCombat];
+  const aDistName = DISTANCE_CARD_NAMES[h.aiDistance];
+  const aCombatName = COMBAT_CARD_NAMES[h.aiCombat];
+  const pEmoji = COMBAT_CARD_INFO[h.playerCombat]?.emoji || '';
+  const aEmoji = COMBAT_CARD_INFO[h.aiCombat]?.emoji || '';
+  const pW = state.player.weapon;
+  const aW = state.ai.weapon;
+
+  // Calculate distance before this round
+  // Walk through history to reconstruct distance at each round
+  let dist = gameConfig.INITIAL_DISTANCE ?? 2;
+  for (let i = 0; i < roundIdx; i++) {
+    const prev = state.history[i];
+    const pDelta = DISTANCE_CARD_BASE[prev.playerDistance]?.delta ?? 0;
+    const aDelta = DISTANCE_CARD_BASE[prev.aiDistance]?.delta ?? 0;
+    dist = Math.max(0, Math.min(3, dist + pDelta + aDelta));
+    // Account for interrupts: if a move was interrupted, undo that side's delta
+    if (prev.pMoveInterrupted) dist = Math.max(0, Math.min(3, dist - pDelta));
+    if (prev.aMoveInterrupted) dist = Math.max(0, Math.min(3, dist - aDelta));
+  }
+  const distBefore = dist;
+
+  // Calculate distance after movement (before interrupt)
+  const pDelta = DISTANCE_CARD_BASE[h.playerDistance]?.delta ?? 0;
+  const aDelta = DISTANCE_CARD_BASE[h.aiDistance]?.delta ?? 0;
+  const distAfterMove = Math.max(0, Math.min(3, distBefore + pDelta + aDelta));
+
+  // Final distance after possible interrupt
+  let distFinal = distAfterMove;
+  if (h.pMoveInterrupted) distFinal = Math.max(0, Math.min(3, distFinal - pDelta));
+  if (h.aMoveInterrupted) distFinal = Math.max(0, Math.min(3, distFinal - aDelta));
+
+  const pAdvBefore = WEAPON_ZONES[pW]?.advantage.includes(distAfterMove);
+  const aAdvBefore = WEAPON_ZONES[aW]?.advantage.includes(distAfterMove);
+
+  // Build explanation
+  const lines = [];
+
+  lines.push(`<h4>📋 第 ${roundIdx + 1} 回合概要</h4>`);
+  lines.push(`<div class="rd-cards">`);
+  lines.push(`<div class="rd-card-row"><span class="rd-p">👤 玩家：</span>${pDistName} + ${pEmoji} ${pCombatName}（${WEAPON_EMOJI[pW]} ${WEAPON_NAMES[pW]}）</div>`);
+  lines.push(`<div class="rd-card-row"><span class="rd-a">🤖 AI：</span>${aDistName} + ${aEmoji} ${aCombatName}（${WEAPON_EMOJI[aW]} ${WEAPON_NAMES[aW]}）</div>`);
+  lines.push(`</div>`);
+
+  // Step 1: Distance
+  lines.push(`<h4>① 身法结算</h4>`);
+  lines.push(`<ul>`);
+  lines.push(`<li>回合前间距：<strong>${DISTANCE_NAMES[distBefore]}(${distBefore})</strong></li>`);
+  if (pDelta !== 0 || aDelta !== 0) {
+    lines.push(`<li>玩家${pDistName}(${pDelta > 0 ? '+' : ''}${pDelta}) + AI${aDistName}(${aDelta > 0 ? '+' : ''}${aDelta})</li>`);
+    lines.push(`<li>移动后间距：<strong>${DISTANCE_NAMES[distAfterMove]}(${distAfterMove})</strong></li>`);
+  } else if (h.playerDistance === 'dodge' || h.aiDistance === 'dodge') {
+    const pDesc = h.playerDistance === 'dodge' ? '闪避' : '扎马';
+    const aDesc = h.aiDistance === 'dodge' ? '闪避' : '扎马';
+    lines.push(`<li>玩家${pDesc} + AI${aDesc}，间距不变</li>`);
+  } else {
+    lines.push(`<li>双方扎马，间距不变</li>`);
+  }
+  if (pAdvBefore) lines.push(`<li>✅ 玩家 ${WEAPON_NAMES[pW]} 在优势区</li>`);
+  if (aAdvBefore) lines.push(`<li>⚠️ AI ${WEAPON_NAMES[aW]} 在优势区</li>`);
+  lines.push(`</ul>`);
+
+  // Step 2: Combat
+  lines.push(`<h4>② 攻防结算</h4>`);
+  lines.push(`<ul>`);
+  const combatExplanation = explainCombatMatchup(h.playerCombat, h.aiCombat, pW, aW, distAfterMove);
+  combatExplanation.forEach(l => lines.push(`<li>${l}</li>`));
+  lines.push(`</ul>`);
+
+  // Step 3: Interrupt
+  if (h.pMoveInterrupted || h.aMoveInterrupted) {
+    lines.push(`<h4>③ ⚡ 身法打断</h4>`);
+    lines.push(`<ul>`);
+    if (h.pMoveInterrupted) {
+      lines.push(`<li>玩家在移动中（${pDistName}）受到HP伤害 → <strong>移动被取消</strong>，间距回退</li>`);
+    }
+    if (h.aMoveInterrupted) {
+      lines.push(`<li>AI在移动中（${aDistName}）受到HP伤害 → <strong>移动被取消</strong>，间距回退</li>`);
+    }
+    lines.push(`<li>最终间距：<strong>${DISTANCE_NAMES[distFinal]}(${distFinal})</strong></li>`);
+    lines.push(`</ul>`);
+  }
+
+  // Summary
+  lines.push(`<h4>📍 最终间距</h4>`);
+  lines.push(`<p><strong>${DISTANCE_NAMES[distFinal]}(${distFinal})</strong></p>`);
+
+  const titleEl = document.getElementById('round-detail-title');
+  const contentEl = document.getElementById('round-detail-content');
+  if (titleEl) titleEl.textContent = `🔍 第 ${roundIdx + 1} 回合详解`;
+  if (contentEl) contentEl.innerHTML = lines.join('\n');
+  toggleModal('modal-round-detail', true);
 }
 
 // ═══════ Event Binding ═══════
@@ -808,8 +619,8 @@ function bindAllEvents(state, selection, uiState, callbacks) {
     const action = el.dataset.action;
     el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'click', () => {
       switch(action) {
-        case 'tutorial': toggleModal('modal-tutorial', true); break;
-        case 'rules': toggleModal('modal-rules', true); break;
+        case 'tutorial': toggleModal('modal-tutorial', true); switchTab('guide'); break;
+        case 'rules': toggleModal('modal-tutorial', true); switchTab('rules'); break;
         case 'newgame': callbacks.onNewGame(); break;
         case 'reset': callbacks.onReset(); break;
         case 'pause': callbacks.onTogglePause(); break;
@@ -832,6 +643,19 @@ function bindAllEvents(state, selection, uiState, callbacks) {
       if (e.target === overlay) overlay.classList.remove('active');
     });
   });
+
+  // Tab switching in tutorial modal
+  document.querySelectorAll('#modal-tutorial .modal-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  });
+
+  // History round click -> explain
+  document.querySelectorAll('.history-clickable').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.roundIdx);
+      showRoundExplanation(state, idx);
+    });
+  });
 }
 
 function toggleModal(id, show) {
@@ -840,6 +664,15 @@ function toggleModal(id, show) {
     if (show) el.classList.add('active');
     else el.classList.remove('active');
   }
+}
+
+function switchTab(tabName) {
+  document.querySelectorAll('#modal-tutorial .modal-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tabName);
+  });
+  document.querySelectorAll('#modal-tutorial .tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === 'tab-' + tabName);
+  });
 }
 
 // ═══════ Render: Result Screen ═══════
@@ -860,7 +693,7 @@ export function renderResult(app, state, onRestart, onBack) {
     <div class="gob-stats">
       回合${state.round} ｜ 
       👤 HP ${state.player.hp}/${MAX_HP} ｜ 
-      🤖 HP ${state.ai.hp}/${MAX_HP}
+      ${state.aiName ? '👤' : '🤖'} ${state.aiName || 'AI'} HP ${state.ai.hp}/${MAX_HP}
     </div>
     <div class="gob-btns">
       <button class="gob-btn restart" id="btn-restart-same">🔄 再来一局</button>

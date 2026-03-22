@@ -1,16 +1,11 @@
-import { CombatCard } from '../types.js';
-import { COMBAT_CARD_NAMES, DISTANCE_CARD_NAMES, DISTANCE_NAMES, gameConfig } from '../constants.js';
-import { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS } from './renderer.js';
+﻿import { CombatCard, DistanceCard } from '../types.js';
+import { COMBAT_CARD_NAMES, DISTANCE_CARD_NAMES, DISTANCE_NAMES, gameConfig, DISTANCE_CARD_BASE } from '../constants.js';
+import { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS } from './weapon-display.js';
 
 // ═══════ Battle Animations ═══════
 
 // Collision description mapping for each card pair
 const COLLISION_FX = {
-  // ── 闪避 vs X ──
-  [`${CombatCard.DODGE}_${CombatCard.SLASH}`]:   { pAnim: 'anim-dodge',    aAnim: 'anim-slash-miss',  spark: '💨', desc: '闪避劈砍' },
-  [`${CombatCard.SLASH}_${CombatCard.DODGE}`]:    { pAnim: 'anim-slash-miss', aAnim: 'anim-dodge',     spark: '💨', desc: '劈砍被闪' },
-  [`${CombatCard.DODGE}_${CombatCard.THRUST}`]:   { pAnim: 'anim-dodge',    aAnim: 'anim-thrust-miss', spark: '💨', desc: '闪避点刺' },
-  [`${CombatCard.THRUST}_${CombatCard.DODGE}`]:   { pAnim: 'anim-thrust-miss', aAnim: 'anim-dodge',    spark: '💨', desc: '点刺被闪' },
   // ── 卸力 vs X ──
   [`${CombatCard.DEFLECT}_${CombatCard.SLASH}`]:  { pAnim: 'anim-deflect',  aAnim: 'anim-recoil',     spark: '🤺', desc: '卸力反制!' },
   [`${CombatCard.SLASH}_${CombatCard.DEFLECT}`]:  { pAnim: 'anim-recoil',   aAnim: 'anim-deflect',    spark: '🤺', desc: '被卸力反制!' },
@@ -36,10 +31,12 @@ const COLLISION_FX = {
   [`${CombatCard.BLOCK}_${CombatCard.FEINT}`]:    { pAnim: 'anim-block-tricked', aAnim: 'anim-feint-a', spark: '🌀', desc: '虚晃骗格挡' },
   [`${CombatCard.FEINT}_${CombatCard.BLOCK}`]:    { pAnim: 'anim-feint-p', aAnim: 'anim-block-tricked', spark: '🌀', desc: '虚晃骗格挡' },
   // ── 同类/空过 ──
-  [`${CombatCard.DODGE}_${CombatCard.DODGE}`]:    { pAnim: 'anim-dodge',    aAnim: 'anim-dodge',      spark: null, desc: '双闪空过' },
   [`${CombatCard.BLOCK}_${CombatCard.BLOCK}`]:    { pAnim: 'anim-block',    aAnim: 'anim-block',      spark: null, desc: '双挡空过' },
   [`${CombatCard.FEINT}_${CombatCard.FEINT}`]:    { pAnim: 'anim-idle',     aAnim: 'anim-idle',       spark: null, desc: '双晃空过' },
   [`${CombatCard.DEFLECT}_${CombatCard.DEFLECT}`]:{ pAnim: 'anim-clash-p',  aAnim: 'anim-clash-a',    spark: '⚡', desc: '卸力对碰' },
+  // ── 卸力 vs 格挡 ──
+  [`${CombatCard.DEFLECT}_${CombatCard.BLOCK}`]:  { pAnim: 'anim-deflect-fail', aAnim: 'anim-block',   spark: '🛡️', desc: '卸力被挡' },
+  [`${CombatCard.BLOCK}_${CombatCard.DEFLECT}`]:  { pAnim: 'anim-block',    aAnim: 'anim-deflect-fail', spark: '🛡️', desc: '格挡卸力' },
 };
 
 function getCollisionFx(pCard, aCard) {
@@ -136,6 +133,32 @@ function showActionTag(stage, fighter, emoji, text, side) {
   return el;
 }
 
+function showInterruptFlash(stage, fighter) {
+  const el = document.createElement('div');
+  el.className = 'float-dmg interrupt-dmg';
+  el.textContent = '⚡ 身法被打断';
+  el.style.left = fighter.style.left;
+  el.style.top = '12%';
+  stage.appendChild(el);
+  setTimeout(() => el.remove(), 1400);
+}
+
+function showRoundBanner(stage, text) {
+  const old = stage.querySelector('.round-banner');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'round-banner';
+  el.textContent = text;
+  stage.appendChild(el);
+  setTimeout(() => { el.classList.add('rb-fade'); setTimeout(() => el.remove(), 500); }, 1000);
+}
+
+function setArenaDepth(stage, dist) {
+  stage.style.setProperty('--arena-cam', dist);
+  stage.classList.remove('dist-0', 'dist-1', 'dist-2', 'dist-3');
+  stage.classList.add('dist-' + dist);
+}
+
 // ═══════ Phase-Based Round Animation ═══════
 export async function playRoundAnimation(prevState, newState) {
   const stage = document.getElementById('arena-stage');
@@ -150,16 +173,8 @@ export async function playRoundAnimation(prevState, newState) {
   const aDist = last.aiDistance;
 
   const MAX_HP = gameConfig.MAX_HP;
-  const MAX_STAMINA = gameConfig.MAX_STAMINA;
   const MAX_STANCE = gameConfig.MAX_STANCE;
-
-  // Intermediate stamina (after costs, before recovery)
-  const pStAfterCost = last.pStaminaAfterCost;
-  const aStAfterCost = last.aStaminaAfterCost;
-  const pTotalCost = prevState.player.stamina - pStAfterCost;
-  const aTotalCost = prevState.ai.stamina - aStAfterCost;
-  const pRecovAmt = newState.player.stamina - pStAfterCost;
-  const aRecovAmt = newState.ai.stamina - aStAfterCost;
+  const MAX_STAMINA = gameConfig.MAX_STAMINA;
 
   // ── Reset fighters to OLD positions ──
   const oldPos = FIGHTER_POSITIONS[prevState.distance] || FIGHTER_POSITIONS[2];
@@ -176,6 +191,7 @@ export async function playRoundAnimation(prevState, newState) {
     distLine.style.width = (oldPos.ai - oldPos.player) + '%';
   }
   if (distLabel) distLabel.textContent = DISTANCE_NAMES[prevState.distance];
+  setArenaDepth(stage, prevState.distance);
   void pFighter.offsetWidth;
 
   // ── Reset ALL stat bars to prevState values ──
@@ -191,14 +207,161 @@ export async function playRoundAnimation(prevState, newState) {
   const pCombatInfo = COMBAT_CARD_INFO[pCombat];
   const aCombatInfo = COMBAT_CARD_INFO[aCombat];
 
-  // ── Phase 1: Distance Card + Movement (0.8s) ──
-  const pDistTag = showActionTag(stage, pFighter, pDistInfo.emoji, DISTANCE_CARD_NAMES[pDist], 'player');
-  const aDistTag = showActionTag(stage, aFighter, aDistInfo.emoji, DISTANCE_CARD_NAMES[aDist], 'ai');
+  // ── Phase 0: 回合标题 ──
+  showRoundBanner(stage, `⚔️  第 ${newState.round} 回合`);
+  await wait(1200);
 
-  if (newState.distance !== prevState.distance) {
-    pFighter.style.transition = 'left 0.6s ease';
-    aFighter.style.transition = 'left 0.6s ease';
-    if (distLine) distLine.style.transition = 'left 0.6s ease, width 0.6s ease';
+  // ── Phase 1: 身法 (顺序独立移动) ──
+  const pDelta = DISTANCE_CARD_BASE[pDist]?.delta ?? 0;
+  const aDelta = DISTANCE_CARD_BASE[aDist]?.delta ?? 0;
+  const intendedDist = Math.max(0, Math.min(3, prevState.distance + pDelta + aDelta));
+  const intendedPos = FIGHTER_POSITIONS[intendedDist] || FIGHTER_POSITIONS[2];
+  const hasInterrupt = last.pMoveInterrupted || last.aMoveInterrupted;
+
+  // 1a: 玩家身法 — 意图动画 + 独立滑动
+  const pDistTag = showActionTag(stage, pFighter, pDistInfo.emoji, DISTANCE_CARD_NAMES[pDist], 'player');
+  const pTarget = intendedPos.player;
+  const pCurrLeft = parseFloat(pFighter.style.left);
+  const aBeforeMove = parseFloat(aFighter.style.left);
+
+  if (pDelta !== 0) {
+    pFighter.classList.add(pDelta < 0 ? 'anim-dash-in' : 'anim-dash-out');
+    if (Math.abs(pTarget - pCurrLeft) > 0.5) {
+      pFighter.style.transition = 'left 0.5s ease';
+      pFighter.style.left = pTarget + '%';
+      if (distLine) {
+        distLine.style.transition = 'left 0.5s ease, width 0.5s ease';
+        distLine.style.left = pTarget + '%';
+        distLine.style.width = (aBeforeMove - pTarget) + '%';
+      }
+    }
+    await wait(600);
+    pFighter.classList.remove('anim-dash-in', 'anim-dash-out');
+  } else if (pDist === DistanceCard.DODGE) {
+    pFighter.classList.add('anim-dodge');
+    await wait(550);
+    pFighter.classList.remove('anim-dodge');
+  } else {
+    pFighter.classList.add('anim-brace');
+    if (Math.abs(pTarget - pCurrLeft) > 0.5) {
+      pFighter.style.transition = 'left 0.5s ease';
+      pFighter.style.left = pTarget + '%';
+      if (distLine) {
+        distLine.style.transition = 'left 0.5s ease, width 0.5s ease';
+        distLine.style.left = pTarget + '%';
+        distLine.style.width = (aBeforeMove - pTarget) + '%';
+      }
+    }
+    await wait(550);
+    pFighter.classList.remove('anim-brace');
+  }
+
+  // 1b: AI身法 — 意图动画 + 独立滑动
+  const aDistTag = showActionTag(stage, aFighter, aDistInfo.emoji, DISTANCE_CARD_NAMES[aDist], 'ai');
+  const aTarget = intendedPos.ai;
+  const pAfterMove = parseFloat(pFighter.style.left);
+
+  if (aDelta !== 0) {
+    aFighter.classList.add(aDelta < 0 ? 'anim-dash-in' : 'anim-dash-out');
+    if (Math.abs(aTarget - aBeforeMove) > 0.5) {
+      aFighter.style.transition = 'left 0.5s ease';
+      aFighter.style.left = aTarget + '%';
+      if (distLine) {
+        distLine.style.transition = 'width 0.5s ease';
+        distLine.style.width = (aTarget - pAfterMove) + '%';
+      }
+    }
+    await wait(600);
+    aFighter.classList.remove('anim-dash-in', 'anim-dash-out');
+  } else if (aDist === DistanceCard.DODGE) {
+    aFighter.classList.add('anim-dodge');
+    await wait(550);
+    aFighter.classList.remove('anim-dodge');
+  } else {
+    aFighter.classList.add('anim-brace');
+    if (Math.abs(aTarget - aBeforeMove) > 0.5) {
+      aFighter.style.transition = 'left 0.5s ease';
+      aFighter.style.left = aTarget + '%';
+      if (distLine) {
+        distLine.style.transition = 'width 0.5s ease';
+        distLine.style.width = (aTarget - pAfterMove) + '%';
+      }
+    }
+    await wait(550);
+    aFighter.classList.remove('anim-brace');
+  }
+
+  if (distLabel) distLabel.textContent = DISTANCE_NAMES[intendedDist];
+  setArenaDepth(stage, intendedDist);
+  pFighter.style.transition = '';
+  aFighter.style.transition = '';
+  if (distLine) distLine.style.transition = '';
+
+
+
+  // 身法体力消耗
+  const pStaminaAfterCost = Math.max(0, prevState.player.stamina - (DISTANCE_CARD_BASE[pDist]?.cost ?? 0));
+  const aStaminaAfterCost = Math.max(0, prevState.ai.stamina - (DISTANCE_CARD_BASE[aDist]?.cost ?? 0));
+  const pDistCostActual = prevState.player.stamina - pStaminaAfterCost;
+  const aDistCostActual = prevState.ai.stamina - aStaminaAfterCost;
+  if (pDistCostActual > 0) {
+    animateBar('.player-side', 'stamina', pStaminaAfterCost, MAX_STAMINA, 400);
+    showBarPop('.player-side', 'stamina', `-${pDistCostActual} 体力`, 'cost');
+    flashBar('.player-side', 'stamina', 'bar-flash-cost');
+  }
+  if (aDistCostActual > 0) {
+    animateBar('.ai-side', 'stamina', aStaminaAfterCost, MAX_STAMINA, 400);
+    showBarPop('.ai-side', 'stamina', `-${aDistCostActual} 体力`, 'cost');
+    flashBar('.ai-side', 'stamina', 'bar-flash-cost');
+  }
+  if (pDistCostActual > 0 || aDistCostActual > 0) await wait(400);
+
+  // Fade out distance tags
+  pDistTag.classList.add('at-fade');
+  aDistTag.classList.add('at-fade');
+  setTimeout(() => { pDistTag.remove(); aDistTag.remove(); }, 350);
+
+  await wait(350); // 身法→攻防过渡停顿
+
+  // ── Phase 2: 攻防卡 + 过招 ──
+  const pCombatTag = showActionTag(stage, pFighter, pCombatInfo.emoji, COMBAT_CARD_NAMES[pCombat], 'player');
+  await wait(350);
+  const aCombatTag = showActionTag(stage, aFighter, aCombatInfo.emoji, COMBAT_CARD_NAMES[aCombat], 'ai');
+  await wait(400);
+
+  const fx = getCollisionFx(pCombat, aCombat);
+  if (fx.pAnim) pFighter.classList.add(fx.pAnim);
+  if (fx.aAnim) aFighter.classList.add(fx.aAnim);
+  if (fx.spark) showCenterSpark(stage, fx.spark, fx.desc);
+
+  await wait(900);
+
+  // Fade combat tags
+  pCombatTag.classList.add('at-fade');
+  aCombatTag.classList.add('at-fade');
+  setTimeout(() => { pCombatTag.remove(); aCombatTag.remove(); }, 350);
+
+  await wait(300); // 攻防→结算过渡
+
+  // ── Phase 2.5: 打断 / 击退 ──
+  if (intendedDist !== newState.distance) {
+    if (hasInterrupt) {
+      if (last.pMoveInterrupted) {
+        pFighter.classList.add('anim-shake');
+        showInterruptFlash(stage, pFighter);
+      }
+      if (last.aMoveInterrupted) {
+        aFighter.classList.add('anim-shake');
+        showInterruptFlash(stage, aFighter);
+      }
+      await wait(400);
+    } else {
+      showCenterSpark(stage, '💥', '击退!');
+      await wait(300);
+    }
+    pFighter.style.transition = 'left 0.4s ease-out';
+    aFighter.style.transition = 'left 0.4s ease-out';
+    if (distLine) distLine.style.transition = 'left 0.4s ease-out, width 0.4s ease-out';
     pFighter.style.left = newPos.player + '%';
     aFighter.style.left = newPos.ai + '%';
     if (distLine) {
@@ -206,48 +369,16 @@ export async function playRoundAnimation(prevState, newState) {
       distLine.style.width = (newPos.ai - newPos.player) + '%';
     }
     if (distLabel) distLabel.textContent = DISTANCE_NAMES[newState.distance];
+    setArenaDepth(stage, newState.distance);
+    await wait(500);
+    pFighter.classList.remove('anim-shake');
+    aFighter.classList.remove('anim-shake');
+    pFighter.style.transition = '';
+    aFighter.style.transition = '';
+    if (distLine) distLine.style.transition = '';
   }
 
-  await wait(800);
-
-  pFighter.style.transition = '';
-  aFighter.style.transition = '';
-  if (distLine) distLine.style.transition = '';
-
-  // Fade out distance tags
-  pDistTag.classList.add('at-fade');
-  aDistTag.classList.add('at-fade');
-  setTimeout(() => { pDistTag.remove(); aDistTag.remove(); }, 350);
-
-  // ── Phase 2: Combat Card + Collision + Stamina Cost (0.9s) ──
-  const pCombatTag = showActionTag(stage, pFighter, pCombatInfo.emoji, COMBAT_CARD_NAMES[pCombat], 'player');
-  const aCombatTag = showActionTag(stage, aFighter, aCombatInfo.emoji, COMBAT_CARD_NAMES[aCombat], 'ai');
-
-  const fx = getCollisionFx(pCombat, aCombat);
-  if (fx.pAnim) pFighter.classList.add(fx.pAnim);
-  if (fx.aAnim) aFighter.classList.add(fx.aAnim);
-  if (fx.spark) showCenterSpark(stage, fx.spark, fx.desc);
-
-  // Animate stamina cost deduction
-  if (pTotalCost > 0) {
-    animateBar('.player-side', 'stamina', pStAfterCost, MAX_STAMINA, 500);
-    showBarPop('.player-side', 'stamina', `-${pTotalCost} 体力`, 'cost');
-    flashBar('.player-side', 'stamina', 'bar-flash-cost');
-  }
-  if (aTotalCost > 0) {
-    animateBar('.ai-side', 'stamina', aStAfterCost, MAX_STAMINA, 500);
-    showBarPop('.ai-side', 'stamina', `-${aTotalCost} 体力`, 'cost');
-    flashBar('.ai-side', 'stamina', 'bar-flash-cost');
-  }
-
-  await wait(700);
-
-  // Fade combat tags
-  pCombatTag.classList.add('at-fade');
-  aCombatTag.classList.add('at-fade');
-  setTimeout(() => { pCombatTag.remove(); aCombatTag.remove(); }, 350);
-
-  // ── Phase 3: Damage / Stance / Execution (1.0s) ──
+  // ── Phase 3: 伤害 / 架势 / 处决 (逐步揭示) ──
   const pHpLoss = prevState.player.hp - newState.player.hp;
   const aHpLoss = prevState.ai.hp - newState.ai.hp;
   const pStGain = newState.player.stance - prevState.player.stance;
@@ -256,12 +387,14 @@ export async function playRoundAnimation(prevState, newState) {
   const pExecuted = prevState.player.stance < MAX_STANCE && newState.player.stance === 0 && pHpLoss >= EXEC_DMG;
   const aExecuted = prevState.ai.stance < MAX_STANCE && newState.ai.stance === 0 && aHpLoss >= EXEC_DMG;
 
+  // ── 3a: 气血伤害逐一揭示 ──
   if (pHpLoss > 0) {
     pFighter.classList.add('anim-hit');
     showFloatDmg(stage, pFighter, `-${pHpLoss}`, 'damage');
     animateBar('.player-side', 'hp', newState.player.hp, MAX_HP, 500);
     showBarPop('.player-side', 'hp', `-${pHpLoss} 气血`, 'cost');
     flashBar('.player-side', 'hp', 'bar-flash-cost');
+    await wait(600);
   }
   if (aHpLoss > 0) {
     aFighter.classList.add('anim-hit');
@@ -269,10 +402,11 @@ export async function playRoundAnimation(prevState, newState) {
     animateBar('.ai-side', 'hp', newState.ai.hp, MAX_HP, 500);
     showBarPop('.ai-side', 'hp', `-${aHpLoss} 气血`, 'cost');
     flashBar('.ai-side', 'hp', 'bar-flash-cost');
+    await wait(600);
   }
+  if (pHpLoss === 0 && aHpLoss === 0) await wait(300);
 
-  await wait(350);
-
+  // ── 3b: 架势变化逐一揭示 ──
   if (!pExecuted) {
     if (pStGain > 0) {
       showFloatDmg(stage, pFighter, `+${pStGain} 架势`, 'stance');
@@ -288,6 +422,7 @@ export async function playRoundAnimation(prevState, newState) {
     animateBar('.player-side', 'stance', 0, MAX_STANCE, 400);
     showBarPop('.player-side', 'stance', '⚔ 处决!', 'exec');
   }
+  if (pExecuted || pStGain !== 0) await wait(450);
 
   if (!aExecuted) {
     if (aStGain > 0) {
@@ -304,26 +439,29 @@ export async function playRoundAnimation(prevState, newState) {
     animateBar('.ai-side', 'stance', 0, MAX_STANCE, 400);
     showBarPop('.ai-side', 'stance', '⚔ 处决!', 'exec');
   }
+  if (aExecuted || aStGain !== 0) await wait(450);
 
   if (pExecuted || aExecuted) {
     stage.classList.add('execution-flash');
+    await wait(500);
   }
 
-  await wait(650);
+  await wait(pExecuted || aExecuted ? 500 : 600);
 
-  // ── Phase 4: Stamina Recovery (0.7s) ──
-  if (pRecovAmt > 0) {
+  // ── Phase 4: 体力回复 (0.5s) ──
+  const pRecov = newState.player.stamina - pStaminaAfterCost;
+  const aRecov = newState.ai.stamina - aStaminaAfterCost;
+  if (pRecov > 0) {
     animateBar('.player-side', 'stamina', newState.player.stamina, MAX_STAMINA, 400);
-    showBarPop('.player-side', 'stamina', `+${pRecovAmt} 恢复`, 'buff');
+    showBarPop('.player-side', 'stamina', `+${pRecov} 体力`, 'buff');
     flashBar('.player-side', 'stamina', 'bar-flash-buff');
   }
-  if (aRecovAmt > 0) {
+  if (aRecov > 0) {
     animateBar('.ai-side', 'stamina', newState.ai.stamina, MAX_STAMINA, 400);
-    showBarPop('.ai-side', 'stamina', `+${aRecovAmt} 恢复`, 'buff');
+    showBarPop('.ai-side', 'stamina', `+${aRecov} 体力`, 'buff');
     flashBar('.ai-side', 'stamina', 'bar-flash-buff');
   }
-
-  if (pRecovAmt > 0 || aRecovAmt > 0) await wait(700);
+  if (pRecov > 0 || aRecov > 0) await wait(500);
 
   // ── Cleanup ──
   const ALL_ANIM_CLASSES = [
@@ -332,6 +470,7 @@ export async function playRoundAnimation(prevState, newState) {
     'anim-thrust-miss', 'anim-deflect', 'anim-deflect-fail', 'anim-recoil',
     'anim-block', 'anim-block-hit', 'anim-block-tricked', 'anim-feint-p', 'anim-feint-a',
     'anim-clash-p', 'anim-clash-a', 'anim-idle',
+    'anim-dash-in', 'anim-dash-out', 'anim-brace',
   ];
   pFighter.classList.remove(...ALL_ANIM_CLASSES);
   aFighter.classList.remove(...ALL_ANIM_CLASSES);

@@ -1,8 +1,8 @@
-import { GamePhase, createGameState } from '../types.js';
-import { gameConfig, WEAPON_ZONES, MAX_DISTANCE, MIN_DISTANCE } from '../constants.js';
-import { resolveDistance, getDistanceCardCost } from './distance.js';
-import { getCombatCardCost } from './card-validator.js';
-import { resolveCombat } from './combat.js';
+﻿import { GamePhase, DistanceCard, CardType, createGameState } from '../types.js';
+import { gameConfig, WEAPON_ZONES, MAX_DISTANCE, MIN_DISTANCE, DISTANCE_CARD_BASE, COMBAT_CARD_BASE, CARD_TYPE_MAP } from '../constants.js';
+import { resolveDistance } from './distance.js';
+import { resolveCombat, resolveOneSided } from './combat.js';
+import { canThrustBreakDodge, dodgeCounterDamage, calcAttackStance } from './weapon.js';
 
 export function initGame(playerWeapon, aiWeapon, aiLevel) {
   const state = createGameState(playerWeapon, aiWeapon, aiLevel);
@@ -20,14 +20,13 @@ export function executeRound(state, playerAction, aiAction) {
   s.player.staggered = false;
   s.ai.staggered = false;
 
+  // 记录本回合身法卡供体力回复判断使用
+  s._lastPDist = playerAction.distanceCard;
+  s._lastADist = aiAction.distanceCard;
+
   s = stepDistanceResolve(s, playerAction.distanceCard, aiAction.distanceCard);
   s = stepCombatResolve(s, playerAction.combatCard, aiAction.combatCard);
   s = stepStatusResolve(s);
-
-  const pStaminaAfterCost = s.player.stamina;
-  const aStaminaAfterCost = s.ai.stamina;
-
-  s = stepRecoverStamina(s);
   s = stepRoundEnd(s);
 
   s.history.push({
@@ -36,79 +35,119 @@ export function executeRound(state, playerAction, aiAction) {
     playerCombat: playerAction.combatCard,
     aiDistance: aiAction.distanceCard,
     aiCombat: aiAction.combatCard,
-    pStaminaAfterCost,
-    aStaminaAfterCost,
+    pMoveInterrupted: s._pInterrupted || false,
+    aMoveInterrupted: s._aInterrupted || false,
   });
+  delete s._pInterrupted;
+  delete s._aInterrupted;
 
-  return s;
-}
-
-function stepRecoverStamina(s) {
-  const MAX_STAMINA = gameConfig.MAX_STAMINA;
-  const STAMINA_RECOVERY = gameConfig.STAMINA_RECOVERY;
-  const pOld = s.player.stamina;
-  const aOld = s.ai.stamina;
-  s.player.stamina = Math.min(MAX_STAMINA, s.player.stamina + STAMINA_RECOVERY);
-  s.ai.stamina = Math.min(MAX_STAMINA, s.ai.stamina + STAMINA_RECOVERY);
-  if (s.player.stamina !== pOld) {
-    s.log.push(`玩家体力恢复：${pOld} → ${s.player.stamina}`);
-  }
-  if (s.ai.stamina !== aOld) {
-    s.log.push(`AI体力恢复：${aOld} → ${s.ai.stamina}`);
-  }
   return s;
 }
 
 function stepDistanceResolve(s, pDist, aDist) {
   const oldDist = s.distance;
+
+  // 闪避：身法层，delta=0，不产生移动
+  s._pDodging = pDist === DistanceCard.DODGE;
+  s._aDodging = aDist === DistanceCard.DODGE;
+
+  // 记录移动方向，供后续打断判定使用
+  s._pMoveDelta = DISTANCE_CARD_BASE[pDist].delta;
+  s._aMoveDelta = DISTANCE_CARD_BASE[aDist].delta;
+
   s.distance = resolveDistance(oldDist, pDist, aDist);
 
-  const pStreak = s.player.distanceCardStreak.card === pDist ? s.player.distanceCardStreak.count : 0;
-  const aStreak = s.ai.distanceCardStreak.card === aDist ? s.ai.distanceCardStreak.count : 0;
-
-  const pCost = getDistanceCardCost(pDist, pStreak, s.player.weapon, oldDist, WEAPON_ZONES);
-  const aCost = getDistanceCardCost(aDist, aStreak, s.ai.weapon, oldDist, WEAPON_ZONES);
-
-  s.player.stamina -= pCost;
-  s.ai.stamina -= aCost;
-
-  if (s.player.distanceCardStreak.card === pDist) {
-    s.player.distanceCardStreak.count += 1;
-  } else {
-    s.player.distanceCardStreak = { card: pDist, count: 1 };
-  }
-  if (s.ai.distanceCardStreak.card === aDist) {
-    s.ai.distanceCardStreak.count += 1;
-  } else {
-    s.ai.distanceCardStreak = { card: aDist, count: 1 };
-  }
+  // 体力消耗：冲步/撤步/闪避各耗2点
+  const pCost = DISTANCE_CARD_BASE[pDist]?.cost ?? 0;
+  const aCost = DISTANCE_CARD_BASE[aDist]?.cost ?? 0;
+  s.player.stamina = Math.max(0, s.player.stamina - pCost);
+  s.ai.stamina = Math.max(0, s.ai.stamina - aCost);
+  if (pCost > 0) s.log.push(`玩家身法消耗：-${pCost}体力`);
+  if (aCost > 0) s.log.push(`AI身法消耗：-${aCost}体力`);
 
   s.log.push(`间距变化：${oldDist} → ${s.distance}`);
   return s;
 }
 
 function stepCombatResolve(s, pCombat, aCombat) {
-  const pStreak = s.player.combatCardStreak.card === pCombat ? s.player.combatCardStreak.count : 0;
-  const aStreak = s.ai.combatCardStreak.card === aCombat ? s.ai.combatCardStreak.count : 0;
+  // ═══════ 闪避结算（身法层判定，在攻防结算前处理）═══════
+  const pDodging = s._pDodging;
+  const aDodging = s._aDodging;
+  let pDodgeSuccess = false, aDodgeSuccess = false;
+  let pCascade = false, aCascade = false;
+  let pDodgeDmgToPlayer = 0, aDodgeDmgToAi = 0; // 闪避反击造成的直接伤害追踪
 
-  const pCost = getCombatCardCost(pCombat, pStreak, s.player.weapon, s.distance);
-  const aCost = getCombatCardCost(aCombat, aStreak, s.ai.weapon, s.distance);
-
-  s.player.stamina -= pCost;
-  s.ai.stamina -= aCost;
-
-  if (s.player.combatCardStreak.card === pCombat) {
-    s.player.combatCardStreak.count += 1;
-  } else {
-    s.player.combatCardStreak = { card: pCombat, count: 1 };
+  // 同时判定双方闪避结果（基于原始攻防卡）
+  if (pDodging) {
+    if (aCombat && CARD_TYPE_MAP[aCombat] === CardType.ATTACK) {
+      if (aCombat === 'thrust' && canThrustBreakDodge(s.ai.weapon, s.distance)) {
+        pCascade = true;
+        s.log.push('⚡ 玩家闪避被AI点刺打断(优势区)！攻防卡取消');
+      } else {
+        pDodgeSuccess = true;
+        s.log.push('💨 玩家闪避成功！AI攻击无效');
+        // 短刀闪避反击
+        const counterDmg = dodgeCounterDamage(s.player.weapon, s.distance);
+        if (counterDmg > 0) {
+          s.ai.hp -= counterDmg;
+          aDodgeDmgToAi -= counterDmg;
+          s.log.push(`🗡️ 闪避反击！AI受${counterDmg}伤`);
+        }
+        // 双刺闪避+2架势
+        if (s.player.weapon === 'dual_stab') {
+          s.ai.stance += 2;
+          s.log.push('🥢 双刺闪避成功：AI+2架势');
+        }
+      }
+    } else {
+      s.log.push('💨 玩家闪避落空(对手无攻击)');
+    }
   }
-  if (s.ai.combatCardStreak.card === aCombat) {
-    s.ai.combatCardStreak.count += 1;
-  } else {
-    s.ai.combatCardStreak = { card: aCombat, count: 1 };
+
+  if (aDodging) {
+    if (pCombat && CARD_TYPE_MAP[pCombat] === CardType.ATTACK) {
+      if (pCombat === 'thrust' && canThrustBreakDodge(s.player.weapon, s.distance)) {
+        aCascade = true;
+        s.log.push('⚡ AI闪避被玩家点刺打断(优势区)！攻防卡取消');
+      } else {
+        aDodgeSuccess = true;
+        s.log.push('💨 AI闪避成功！玩家攻击无效');
+        const counterDmg = dodgeCounterDamage(s.ai.weapon, s.distance);
+        if (counterDmg > 0) {
+          s.player.hp -= counterDmg;
+          pDodgeDmgToPlayer -= counterDmg;
+          s.log.push(`🗡️ 闪避反击！玩家受${counterDmg}伤`);
+        }
+        if (s.ai.weapon === 'dual_stab') {
+          s.player.stance += 2;
+          s.log.push('🥢 双刺闪避成功：玩家+2架势');
+        }
+      }
+    } else {
+      s.log.push('💨 AI闪避落空(对手无攻击)');
+    }
   }
 
-  const effects = resolveCombat(s, pCombat, aCombat);
+  // 确定有效攻防卡
+  let effectiveP = pCascade ? null : pCombat;
+  let effectiveA = aCascade ? null : aCombat;
+  if (pDodgeSuccess) effectiveA = null; // 闪避成功→对手攻击无效
+  if (aDodgeSuccess) effectiveP = null;
+
+  // ═══════ 攻防结算 ═══════
+  let effects;
+  if (effectiveP && effectiveA) {
+    effects = resolveCombat(s, effectiveP, effectiveA);
+  } else if (effectiveP && !effectiveA) {
+    effects = resolveOneSided(s, 'player', effectiveP);
+  } else if (!effectiveP && effectiveA) {
+    effects = resolveOneSided(s, 'ai', effectiveA);
+  } else {
+    // 双方卡牌都被取消
+    effects = { player: { hpChange: 0, stanceChange: 0, staggered: false },
+                ai: { hpChange: 0, stanceChange: 0, staggered: false },
+                distancePush: 0, log: ['双方攻防均被取消'] };
+  }
 
   s.player.hp += effects.player.hpChange;
   s.ai.hp += effects.ai.hpChange;
@@ -132,6 +171,18 @@ function stepCombatResolve(s, pCombat, aCombat) {
     }
   }
 
+  // 双刺追击：贴身点刺命中（造成伤害）时追加1点伤害
+  if (s.distance === 0) {
+    if (s.player.weapon === 'dual_stab' && effectiveP === 'thrust' && effects.ai.hpChange < 0) {
+      s.ai.hp -= 1;
+      s.log.push('🥢 双刺追击：贴身点刺二连，AI额外受1伤');
+    }
+    if (s.ai.weapon === 'dual_stab' && effectiveA === 'thrust' && effects.player.hpChange < 0) {
+      s.player.hp -= 1;
+      s.log.push('🥢 双刺追击：贴身点刺二连，玩家额外受1伤');
+    }
+  }
+
   if (effects.distancePush !== 0) {
     const oldDist = s.distance;
     s.distance = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, s.distance + effects.distancePush));
@@ -141,6 +192,28 @@ function stepCombatResolve(s, pCombat, aCombat) {
   }
 
   s.log.push(...effects.log);
+
+  // 攻击打断身法：移动中遭到攻击命中，移动取消
+  // 包括闪避反击造成的直接伤害和攻防结算造成的伤害
+  const pTotalHpLoss = effects.player.hpChange + (pDodgeDmgToPlayer ?? 0);
+  const aTotalHpLoss = effects.ai.hpChange + (aDodgeDmgToAi ?? 0);
+  s._pInterrupted = false;
+  s._aInterrupted = false;
+  if ((s._pMoveDelta ?? 0) !== 0 && pTotalHpLoss < 0) {
+    s.distance = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, s.distance - s._pMoveDelta));
+    s._pInterrupted = true;
+    s.log.push('⚡ 玩家身法被打断！攻击命中，移动未完成');
+  }
+  if ((s._aMoveDelta ?? 0) !== 0 && aTotalHpLoss < 0) {
+    s.distance = Math.max(MIN_DISTANCE, Math.min(MAX_DISTANCE, s.distance - s._aMoveDelta));
+    s._aInterrupted = true;
+    s.log.push('⚡ AI身法被打断！攻击命中，移动未完成');
+  }
+  delete s._pMoveDelta;
+  delete s._aMoveDelta;
+  delete s._pDodging;
+  delete s._aDodging;
+
   return s;
 }
 
@@ -150,9 +223,6 @@ function stepStatusResolve(s) {
 
   s.player.stance = Math.max(0, s.player.stance);
   s.ai.stance = Math.max(0, s.ai.stance);
-
-  s.player.stamina = Math.max(0, s.player.stamina);
-  s.ai.stamina = Math.max(0, s.ai.stamina);
 
   if (s.player.stance >= MAX_STANCE) {
     s.player.hp -= EXECUTION_DAMAGE;
@@ -172,6 +242,25 @@ function stepStatusResolve(s) {
 }
 
 function stepRoundEnd(s) {
+  const MAX_STAMINA = gameConfig.MAX_STAMINA;
+  const RECOVERY = gameConfig.STAMINA_RECOVERY;
+
+  // 体力恢复：每回合+1，扎马额外+1（共+2）
+  const pLastDist = s.history.length > 0 ? s.history[s.history.length - 1].playerDistance : null;
+  const aLastDist = s.history.length > 0 ? s.history[s.history.length - 1].aiDistance : null;
+  // 注意: 历史尚未 push，当前回合的身法卡在当前回合未入历史，通过参数传入
+  const pHold = s._lastPDist === 'hold';
+  const aHold = s._lastADist === 'hold';
+  const pRecov = pHold ? RECOVERY + 1 : RECOVERY;
+  const aRecov = aHold ? RECOVERY + 1 : RECOVERY;
+
+  s.player.stamina = Math.min(MAX_STAMINA, s.player.stamina + pRecov);
+  s.ai.stamina = Math.min(MAX_STAMINA, s.ai.stamina + aRecov);
+
+  // 清除临时身法卡记录
+  delete s._lastPDist;
+  delete s._lastADist;
+
   const pDead = s.player.hp <= 0;
   const aDead = s.ai.hp <= 0;
 

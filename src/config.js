@@ -1,31 +1,25 @@
-import { gameConfig, WEAPON_ZONES, WEAPON_NAMES } from './constants.js';
+﻿import { gameConfig, WEAPON_ZONES, WEAPON_NAMES } from './constants.js';
 
 const STORAGE_KEY = 'lbq2_config';
 
-const DEFAULTS = {
-  MAX_HP: 10,
-  MAX_STAMINA: 8,
-  STAMINA_RECOVERY: 3,
-  MAX_STANCE: 5,
-  EXECUTION_DAMAGE: 5,
-  INITIAL_DISTANCE: 2,
-  WEAPON_ZONES: {
-    short_blade:  { advantage: [0, 1], disadvantage: [2, 3] },
-    spear:        { advantage: [2, 3], disadvantage: [0] },
-    sword:        { advantage: [1, 2], disadvantage: [0, 3] },
-    staff:        { advantage: [1, 2, 3], disadvantage: [0] },
-    great_blade:  { advantage: [2], disadvantage: [0] },
-    dual_stab:    { advantage: [0], disadvantage: [2, 3] },
-  },
-};
+// 从 constants.js 的初始值生成默认值，消除重复定义
+function buildDefaults() {
+  const wz = {};
+  for (const [k, v] of Object.entries(WEAPON_ZONES)) {
+    wz[k] = { advantage: [...v.advantage], disadvantage: [...v.disadvantage] };
+  }
+  return { ...gameConfig, WEAPON_ZONES: wz };
+}
+
+const DEFAULTS = buildDefaults();
 
 export const CONFIG_META = {
   MAX_HP:            { label: '最大气血', min: 5, max: 30, step: 1 },
-  MAX_STAMINA:       { label: '最大体力', min: 4, max: 16, step: 1 },
-  STAMINA_RECOVERY:  { label: '回合恢复体力', min: 1, max: 8, step: 1 },
   MAX_STANCE:        { label: '处决架势阈值', min: 3, max: 10, step: 1 },
   EXECUTION_DAMAGE:  { label: '处决伤害', min: 2, max: 15, step: 1 },
   INITIAL_DISTANCE:  { label: '初始间距', min: 0, max: 3, step: 1 },
+  MAX_STAMINA:       { label: '最大体力', min: 2, max: 8, step: 1 },
+  STAMINA_RECOVERY:  { label: '体力回复/回合', min: 1, max: 3, step: 1 },
 };
 
 export const CONFIG_DEFAULTS = DEFAULTS;
@@ -121,6 +115,8 @@ export function getCurrentConfig() {
   return merged;
 }
 
-// 启动时自动加载配置
-const saved = loadConfig();
-if (saved) applyConfig(saved);
+/** 启动时调用一次，从 localStorage 恢复配置 */
+export function initConfig() {
+  const saved = loadConfig();
+  if (saved) applyConfig(saved);
+}

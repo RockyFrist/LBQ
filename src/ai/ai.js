@@ -1,19 +1,31 @@
-import { CombatCard, DistanceCard, CardType } from '../types.js';
-import { WEAPON_ZONES, CARD_TYPE_MAP, COMBAT_CARD_BASE, gameConfig } from '../constants.js';
+﻿import { CombatCard, DistanceCard, CardType } from '../types.js';
+import { WEAPON_ZONES, CARD_TYPE_MAP, COMBAT_CARD_BASE, DISTANCE_CARD_BASE } from '../constants.js';
 import { getAvailableCombatCards, getAvailableDistanceCards } from '../engine/card-validator.js';
 import { isAdvantage, isDisadvantage } from '../engine/weapon.js';
 
 export function aiDecide(state) {
   const level = state.aiLevel;
+  let result;
   switch (level) {
-    case 1: return aiLevel1(state);
-    case 2: return aiLevel2(state);
-    case 3: return aiLevel3(state);
-    case 4: return aiLevel4(state);
-    case 5: return aiLevel5(state);
-    case 6: return aiLevel6(state);
-    default: return aiLevel1(state);
+    case 1: result = aiLevel1(state); break;
+    case 2: result = aiLevel2(state); break;
+    case 3: result = aiLevel3(state); break;
+    case 4: result = aiLevel4(state); break;
+    case 5: result = aiLevel5(state); break;
+    case 6: result = aiLevel6(state); break;
+    default: result = aiLevel1(state); break;
   }
+  // 闪避归身法层：验证所选组合的体力是否足够，不够则降级选牌
+  return validateAiDecision(state, result);
+}
+
+function validateAiDecision(state, decision) {
+  const reservedStamina = DISTANCE_CARD_BASE[decision.distanceCard]?.cost ?? 0;
+  const validCombat = getAvailableCombatCards(state.ai, state.distance, reservedStamina);
+  if (!validCombat.includes(decision.combatCard)) {
+    decision.combatCard = pick(validCombat);
+  }
+  return decision;
 }
 
 function pick(arr) {
@@ -48,6 +60,20 @@ function directionToAdvantage(weapon, currentDist) {
   if (advZone.includes(currentDist)) return DistanceCard.HOLD;
   const avg = advZone.reduce((a, b) => a + b, 0) / advZone.length;
   return currentDist > avg ? DistanceCard.ADVANCE : DistanceCard.RETREAT;
+}
+
+// 闪避选择辅助：高架势时防御性闪避，或对手优势区时闪避规避攻击
+function shouldConsiderDodge(state, distCards, dodgeChance = 0.3) {
+  if (!distCards.includes(DistanceCard.DODGE)) return false;
+  const aiStance = state.ai.stance;
+  const playerWeapon = state.player.weapon;
+  const dist = state.distance;
+  const playerInAdv = WEAPON_ZONES[playerWeapon]?.advantage.includes(dist);
+  // 高架势时倾向闪避
+  if (aiStance >= 3 && Math.random() < dodgeChance + 0.2) return true;
+  // 对手在优势区时有概率闪避
+  if (playerInAdv && Math.random() < dodgeChance) return true;
+  return false;
 }
 
 function aiLevel1(state) {
@@ -120,7 +146,7 @@ function aiLevel3(state) {
       const attacks = combatCards.filter(c => CARD_TYPE_MAP[c] === CardType.ATTACK);
       combatCard = attacks.length ? weightedPick(attacks, attacks.map(() => 1)) : pick(combatCards);
     } else {
-      const defs = combatCards.filter(c => c === CombatCard.DODGE || c === CombatCard.BLOCK);
+      const defs = combatCards.filter(c => c === CombatCard.BLOCK);
       combatCard = defs.length && Math.random() < 0.6 ? pick(defs) : pick(combatCards);
     }
   }
@@ -134,7 +160,6 @@ function getSimpleCounter(opCard, available) {
     [CombatCard.THRUST]: CombatCard.BLOCK,
     [CombatCard.FEINT]: CombatCard.THRUST,
     [CombatCard.BLOCK]: CombatCard.FEINT,
-    [CombatCard.DODGE]: CombatCard.SLASH,
     [CombatCard.DEFLECT]: CombatCard.FEINT,
   };
   const c = map[opCard];
@@ -169,12 +194,22 @@ function aiLevel4(state) {
   }
   if (!distCards.includes(distCard)) distCard = pick(distCards);
 
+  // 体力管理：体力<=1且不在危险处境，优先扎马回复
+  if (state.ai.stamina <= 1 && !playerInAdv) {
+    distCard = DistanceCard.HOLD;
+  }
+
+  // 闪避考虑：高架势或对手优势区时可能选闪避
+  if (shouldConsiderDodge(state, distCards, 0.25)) {
+    distCard = DistanceCard.DODGE;
+  }
+
   let combatCard;
   const aiStance = state.ai.stance;
   const playerStance = state.player.stance;
 
   if (aiStance >= 3) {
-    const safe = combatCards.filter(c => c === CombatCard.DODGE || c === CombatCard.BLOCK);
+    const safe = combatCards.filter(c => c === CombatCard.BLOCK);
     if (safe.length) { combatCard = pick(safe); }
   }
 
@@ -196,17 +231,12 @@ function aiLevel4(state) {
     }
   }
 
-  if (!combatCard && state.ai.stamina <= 2) {
-    const cheap = combatCards.filter(c => COMBAT_CARD_BASE[c].cost <= 1);
-    if (cheap.length) combatCard = pick(cheap);
-  }
-
   if (!combatCard) {
     if (aiInAdv) {
       const opts = [CombatCard.SLASH, CombatCard.THRUST, CombatCard.FEINT].filter(c => combatCards.includes(c));
       combatCard = opts.length ? weightedPick(opts, [3, 2, 2]) : pick(combatCards);
     } else {
-      const opts = [CombatCard.BLOCK, CombatCard.DODGE, CombatCard.THRUST].filter(c => combatCards.includes(c));
+      const opts = [CombatCard.BLOCK, CombatCard.THRUST, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
       combatCard = opts.length ? weightedPick(opts, [3, 2, 1]) : pick(combatCards);
     }
   }
@@ -246,6 +276,11 @@ function aiLevel5(state) {
   }
   if (!distCards.includes(distCard)) distCard = pick(distCards);
 
+  // 闪避考虑：高架势或对手优势区时可能选闪避
+  if (shouldConsiderDodge(state, distCards, 0.3)) {
+    distCard = DistanceCard.DODGE;
+  }
+
   let combatCard;
   const aiStance = state.ai.stance;
   const playerStance = state.player.stance;
@@ -261,7 +296,7 @@ function aiLevel5(state) {
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
   if (aiStance >= 4) {
-    const safe = [CombatCard.DODGE, CombatCard.BLOCK].filter(c => combatCards.includes(c));
+    const safe = [CombatCard.BLOCK].filter(c => combatCards.includes(c));
     if (safe.length) combatCard = pick(safe);
   }
 
@@ -291,18 +326,13 @@ function aiLevel5(state) {
     if (counter && Math.random() < 0.6) combatCard = counter;
   }
 
-  if (!combatCard && state.ai.stamina <= 2) {
-    const cheap = combatCards.filter(c => COMBAT_CARD_BASE[c].cost <= 1);
-    if (cheap.length) combatCard = pick(cheap);
-  }
-
   if (!combatCard) {
     if (aiInAdv) {
       const opts = [CombatCard.SLASH, CombatCard.THRUST, CombatCard.FEINT].filter(c => combatCards.includes(c));
       combatCard = opts.length ? weightedPick(opts, [3, 3, 2]) : pick(combatCards);
     } else {
-      const opts = [CombatCard.BLOCK, CombatCard.DODGE, CombatCard.THRUST].filter(c => combatCards.includes(c));
-      combatCard = opts.length ? weightedPick(opts, [3, 3, 1]) : pick(combatCards);
+      const opts = [CombatCard.BLOCK, CombatCard.THRUST, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+      combatCard = opts.length ? weightedPick(opts, [3, 2, 1]) : pick(combatCards);
     }
   }
 
@@ -311,11 +341,10 @@ function aiLevel5(state) {
 
 function getSmartCounter(opCard, available, opWeapon, dist) {
   const counters = {
-    [CombatCard.SLASH]: [CombatCard.DEFLECT, CombatCard.DODGE],
-    [CombatCard.THRUST]: [CombatCard.BLOCK, CombatCard.DODGE],
+    [CombatCard.SLASH]: [CombatCard.DEFLECT, CombatCard.BLOCK],
+    [CombatCard.THRUST]: [CombatCard.BLOCK, CombatCard.DEFLECT],
     [CombatCard.FEINT]: [CombatCard.THRUST, CombatCard.SLASH],
     [CombatCard.BLOCK]: [CombatCard.FEINT, CombatCard.SLASH],
-    [CombatCard.DODGE]: [CombatCard.SLASH, CombatCard.FEINT],
     [CombatCard.DEFLECT]: [CombatCard.THRUST, CombatCard.FEINT],
   };
   const choices = counters[opCard] || [];
@@ -371,13 +400,18 @@ function aiLevel6(state) {
   }
   if (!distCards.includes(distCard)) distCard = pick(distCards);
 
+  // 闪避考虑：高架势或对手优势区时可能选闪避（Level6更积极）
+  if (shouldConsiderDodge(state, distCards, 0.35)) {
+    distCard = DistanceCard.DODGE;
+  }
+
   let combatCard;
   const aiStance = state.ai.stance;
   const playerStance = state.player.stance;
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
   if (aiStance >= 3) {
-    const safe = [CombatCard.DODGE, CombatCard.BLOCK].filter(c => combatCards.includes(c));
+    const safe = [CombatCard.BLOCK].filter(c => combatCards.includes(c));
     if (safe.length) combatCard = pick(safe);
   }
 
@@ -422,18 +456,13 @@ function aiLevel6(state) {
     if (counter) combatCard = counter;
   }
 
-  if (!combatCard && state.ai.stamina <= 2) {
-    const cheap = combatCards.filter(c => COMBAT_CARD_BASE[c].cost <= 1);
-    if (cheap.length) combatCard = pick(cheap);
-  }
-
   if (!combatCard) {
     if (aiInAdv) {
       const opts = [CombatCard.SLASH, CombatCard.THRUST, CombatCard.FEINT, CombatCard.BLOCK].filter(c => combatCards.includes(c));
       combatCard = opts.length ? weightedPick(opts, [3, 2, 2, 1]) : pick(combatCards);
     } else {
-      const opts = [CombatCard.BLOCK, CombatCard.DODGE, CombatCard.THRUST, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
-      combatCard = opts.length ? weightedPick(opts, [3, 3, 1, 1]) : pick(combatCards);
+      const opts = [CombatCard.BLOCK, CombatCard.THRUST, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+      combatCard = opts.length ? weightedPick(opts, [3, 2, 1]) : pick(combatCards);
     }
   }
 

@@ -1,4 +1,4 @@
-// ═══════ Toast Notification ═══════
+﻿// ═══════ Toast Notification ═══════
 export function showToast(msg, type = 'info') {
   let container = document.getElementById('toast-container');
   if (!container) {

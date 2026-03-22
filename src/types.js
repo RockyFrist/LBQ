@@ -1,4 +1,4 @@
-// ===== 枚举常量 =====
+﻿// ===== 枚举常量 =====
 
 /** 兵器类型 */
 export const WeaponType = Object.freeze({
@@ -15,11 +15,11 @@ export const DistanceCard = Object.freeze({
   ADVANCE: 'advance',
   RETREAT: 'retreat',
   HOLD: 'hold',
+  DODGE: 'dodge',
 });
 
 /** 攻防操作卡 */
 export const CombatCard = Object.freeze({
-  DODGE: 'dodge',
   DEFLECT: 'deflect',
   SLASH: 'slash',
   THRUST: 'thrust',
@@ -50,11 +50,9 @@ export function createPlayerState(weapon) {
   return {
     weapon,
     hp: 10,
-    stamina: 8,
     stance: 0,
+    stamina: 4,
     staggered: false,
-    distanceCardStreak: { card: null, count: 0 },
-    combatCardStreak: { card: null, count: 0 },
   };
 }
 
@@ -66,6 +64,8 @@ export function createGameState(playerWeapon, aiWeapon, aiLevel) {
     player: createPlayerState(playerWeapon),
     ai: createPlayerState(aiWeapon),
     aiLevel,
+    aiName: null,
+    aiTitle: null,
     history: [],
     log: [],
     gameOver: false,

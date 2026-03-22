@@ -1,9 +1,17 @@
-import { initGame, executeRound } from './engine/game-engine.js';
+﻿import { initGame, executeRound } from './engine/game-engine.js';
 import { aiDecide } from './ai/ai.js';
-import { renderSetup, renderGame, renderResult, scrollLogToBottom } from './ui/renderer.js';
+import { renderGame, renderResult, scrollLogToBottom } from './ui/renderer.js';
+import { renderTitleScreen, renderBattleSetup, renderTowerWeaponSelect } from './ui/setup-screen.js';
 import { playRoundAnimation } from './ui/animation.js';
 import { showToast } from './ui/toast.js';
 import { validateAction } from './engine/card-validator.js';
+import { createTowerState, getTowerFloor, advanceTowerFloor, isTowerComplete } from './tower/tower.js';
+import { renderFloorIntro, renderTowerBetween, renderTowerVictory, renderTowerGameOver } from './tower/tower-ui.js';
+import { gameConfig } from './constants.js';
+import { initConfig } from './config.js';
+
+// 启动时恢复用户配置
+initConfig();
 
 const app = document.getElementById('app');
 
@@ -15,11 +23,13 @@ let isPaused = false;
 let startConfig = null;
 let animating = false;
 
+// ═══════ Tower state ═══════
+let towerState = null;
+let towerFloorData = null;
+
+// ═══════ UI helpers ═══════
 function getUiState() {
-  return {
-    isPaused,
-    canUndo: stateStack.length > 0,
-  };
+  return { isPaused, canUndo: stateStack.length > 0 };
 }
 
 function getCallbacks() {
@@ -34,25 +44,82 @@ function getCallbacks() {
   };
 }
 
-function showSetup() {
+// ═══════ Title Screen ═══════
+function showTitle() {
+  resetGameVars();
+  towerState = null;
+  towerFloorData = null;
+  renderTitleScreen(app, {
+    onTower: () => renderTowerWeaponSelect(app, startTower, showTitle),
+    onBattle: () => renderBattleSetup(app, startBattle, showTitle),
+  });
+}
+
+function resetGameVars() {
   gameState = null;
   prevState = null;
   selection = { distanceCard: null, combatCard: null };
   stateStack = [];
   isPaused = false;
-  renderSetup(app, startGame);
+  animating = false;
 }
 
-function startGame(playerWeapon, aiWeapon, aiLevel) {
+// ═══════ Free Battle Mode ═══════
+function startBattle(playerWeapon, aiWeapon, aiLevel) {
+  towerState = null;
   startConfig = { playerWeapon, aiWeapon, aiLevel };
+  resetGameVars();
   gameState = initGame(playerWeapon, aiWeapon, aiLevel);
-  prevState = null;
-  selection = { distanceCard: null, combatCard: null };
-  stateStack = [];
-  isPaused = false;
   render();
 }
 
+// ═══════ Tower Mode ═══════
+function startTower(playerWeapon) {
+  towerState = createTowerState(playerWeapon);
+  startConfig = null;
+  showFloorIntro();
+}
+
+function showFloorIntro() {
+  towerFloorData = getTowerFloor(towerState);
+  if (!towerFloorData) {
+    renderTowerVictory(app, towerState, showTitle);
+    return;
+  }
+  renderFloorIntro(app, towerState, towerFloorData, startFloorBattle, showTitle);
+}
+
+function startFloorBattle() {
+  const fd = towerFloorData;
+  resetGameVars();
+  gameState = initGame(towerState.playerWeapon, fd.weapon, fd.aiLevel);
+  gameState.aiName = fd.npc;
+  gameState.aiTitle = fd.title;
+  // Carry over tower HP
+  gameState.player.hp = towerState.playerHp;
+  startConfig = null;  // prevent "restart same" in tower mode
+  render();
+}
+
+function handleTowerBattleEnd() {
+  if (!towerState) return;
+
+  if (gameState.winner === 'player') {
+    const prevHp = towerState.playerHp;
+    towerState = advanceTowerFloor(towerState, gameState.player.hp);
+    if (isTowerComplete(towerState)) {
+      renderTowerVictory(app, towerState, showTitle);
+    } else {
+      renderTowerBetween(app, towerState, prevHp, showFloorIntro);
+    }
+  } else {
+    towerState.gameOver = true;
+    renderTowerGameOver(app, towerState, towerFloorData,
+      () => startTower(towerState.playerWeapon), showTitle);
+  }
+}
+
+// ═══════ Shared game logic ═══════
 function render() {
   renderGame(app, gameState, selection, getUiState(), getCallbacks());
   scrollLogToBottom();
@@ -87,19 +154,22 @@ async function handleConfirm() {
 
   selection = { distanceCard: null, combatCard: null };
 
-  /* Lock input & play animation */
   animating = true;
   const wrapper = app.querySelector('.game-wrapper');
   if (wrapper) wrapper.classList.add('animating');
 
-  render();                                        // render new state (arena, panels, log)
-  await playRoundAnimation(prevState, gameState);  // async animation sequence
+  render();
+  await playRoundAnimation(prevState, gameState);
 
   animating = false;
   if (wrapper) wrapper.classList.remove('animating');
 
   if (gameState.gameOver) {
-    renderResult(app, gameState, handleRestartSame, showSetup);
+    if (towerState) {
+      handleTowerBattleEnd();
+    } else {
+      renderResult(app, gameState, handleRestartSame, showTitle);
+    }
   }
 }
 
@@ -113,19 +183,22 @@ function handleUndo() {
 }
 
 function handleReset() {
-  if (!startConfig) return;
-  startGame(startConfig.playerWeapon, startConfig.aiWeapon, startConfig.aiLevel);
+  if (towerState) {
+    startFloorBattle();
+  } else if (startConfig) {
+    startBattle(startConfig.playerWeapon, startConfig.aiWeapon, startConfig.aiLevel);
+  }
 }
 
 function handleNewGame() {
-  showSetup();
+  showTitle();
 }
 
 function handleRestartSame() {
   if (startConfig) {
-    startGame(startConfig.playerWeapon, startConfig.aiWeapon, startConfig.aiLevel);
+    startBattle(startConfig.playerWeapon, startConfig.aiWeapon, startConfig.aiLevel);
   } else {
-    showSetup();
+    showTitle();
   }
 }
 
@@ -136,9 +209,7 @@ function handleTogglePause() {
 }
 
 function handleDifficultyChange(level) {
-  if (gameState) {
-    gameState.aiLevel = level;
-  }
+  if (gameState) gameState.aiLevel = level;
 }
 
-showSetup();
+showTitle();

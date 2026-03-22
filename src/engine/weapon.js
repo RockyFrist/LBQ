@@ -1,5 +1,86 @@
 import { WeaponType, CombatCard } from '../types.js';
-import { WEAPON_ZONES, COMBAT_CARD_BASE } from '../constants.js';
+import { WEAPON_ZONES } from '../constants.js';
+
+// ═══════ WEAPON_PROFILES — 单一数据来源 ═══════
+// 每个兵器只定义与默认值不同的属性
+
+const DEFAULTS = {
+  deflectStagger: true,     // 卸力成功是否造成僵直
+  deflectSelfStance: 0,     // 卸力成功后自身架势变化
+  blockSlashReduction: 1,   // 格挡对劈砍的基础减伤
+  advBlockSlashReduction: 0,// 优势区格挡对劈砍的额外减伤
+  advDodgeCounter: 0,       // 优势区闪避反击伤害
+  advBlockPerfect: false,   // 优势区完美格挡(劈砍免伤)
+  advBlockBonusStance: 0,   // 优势区格挡给对手额外架势
+  advSlashBonusStance: 0,   // 优势区劈砍命中额外架势
+  advBlockPushDist: 0,      // 优势区格挡推距
+  advFeintBonusStance: 0,   // 优势区虚晃额外架势
+  damageRules: [],          // 伤害修正规则 [{adv, disadv, dist, minDist, card, mod}]
+  pushRules: [],            // 推距规则 [{card, vs, adv, push}]
+};
+
+const WEAPON_PROFILES = {
+  [WeaponType.SHORT_BLADE]: {
+    advDodgeCounter: 1,
+    advFeintBonusStance: 1,
+    damageRules: [
+      { minDist: 3, card: CombatCard.SLASH, mod: -3 },
+    ],
+  },
+  [WeaponType.SPEAR]: {
+    advBlockPushDist: 1,
+    damageRules: [
+      { adv: true, card: CombatCard.SLASH, mod: +2 },
+      { dist: 0, card: CombatCard.SLASH, mod: -3 },
+    ],
+  },
+  [WeaponType.SWORD]: {
+    deflectStagger: false,
+    deflectSelfStance: -2,
+    advBlockPerfect: true,
+    damageRules: [
+      { dist: 0, card: CombatCard.SLASH, mod: -2 },
+      { dist: 3, card: CombatCard.SLASH, mod: -3 },
+    ],
+  },
+  [WeaponType.STAFF]: {
+    advBlockBonusStance: 1,
+    advSlashBonusStance: 2,
+    advFeintBonusStance: 1,
+    damageRules: [
+      { dist: 0, card: CombatCard.SLASH, mod: -3 },
+    ],
+    pushRules: [
+      { card: CombatCard.FEINT, vs: CombatCard.BLOCK, adv: true, push: 1 },
+    ],
+  },
+  [WeaponType.GREAT_BLADE]: {
+    advBlockSlashReduction: 1,
+    damageRules: [
+      { adv: true, card: CombatCard.SLASH, mod: +3 },
+      { dist: 0, card: CombatCard.SLASH, mod: -3 },
+    ],
+    pushRules: [
+      { card: CombatCard.SLASH, adv: true, push: 1 },
+    ],
+  },
+  [WeaponType.DUAL_STAB]: {
+    advFeintBonusStance: 1,
+    damageRules: [
+      { adv: true, card: CombatCard.THRUST, mod: +1 },
+      { disadv: true, card: CombatCard.SLASH, mod: -3 },
+    ],
+  },
+};
+
+// ═══════ Profile 查询 ═══════
+
+function prof(weapon) {
+  const p = WEAPON_PROFILES[weapon];
+  return p ? { ...DEFAULTS, ...p } : { ...DEFAULTS };
+}
+
+// ═══════ 通用距离判定 ═══════
 
 export function isAdvantage(weapon, distance) {
   return WEAPON_ZONES[weapon].advantage.includes(distance);
@@ -9,145 +90,80 @@ export function isDisadvantage(weapon, distance) {
   return WEAPON_ZONES[weapon].disadvantage.includes(distance);
 }
 
-export function getDisabledCards(weapon, distance) {
-  const disabled = [];
-  
-  switch (weapon) {
-    case WeaponType.SHORT_BLADE:
-      if (distance >= 3) disabled.push(CombatCard.SLASH);
-      break;
-    case WeaponType.SPEAR:
-      if (distance === 0) {
-        disabled.push(CombatCard.SLASH, CombatCard.DEFLECT);
-      }
-      break;
-    case WeaponType.SWORD:
-      if (distance === 0) disabled.push(CombatCard.SLASH);
-      if (distance === 3) disabled.push(CombatCard.THRUST, CombatCard.SLASH);
-      break;
-    case WeaponType.STAFF:
-      if (distance === 0) disabled.push(CombatCard.SLASH);
-      break;
-    case WeaponType.GREAT_BLADE:
-      if (distance === 0) {
-        disabled.push(CombatCard.SLASH, CombatCard.DEFLECT);
-      }
-      break;
-    case WeaponType.DUAL_STAB:
-      if (distance >= 2) {
-        disabled.push(CombatCard.SLASH, CombatCard.DEFLECT);
-      }
-      break;
-  }
-
-  return disabled;
-}
+// ═══════ 伤害修正 ═══════
 
 export function getDamageModifier(weapon, distance, combatCard) {
-  const adv = isAdvantage(weapon, distance);
-  const disadv = isDisadvantage(weapon, distance);
-
-  switch (weapon) {
-    case WeaponType.SHORT_BLADE:
-      if (adv && combatCard === CombatCard.THRUST) return +1;
-      if (adv && combatCard === CombatCard.SLASH) return +1;
-      if (distance >= 3) return -1;
-      break;
-    case WeaponType.SPEAR:
-      if (adv && combatCard === CombatCard.SLASH) return +2;
-      if (disadv && combatCard === CombatCard.THRUST) return -1;
-      break;
-    case WeaponType.SWORD:
-      if (disadv && distance === 0) return -1;
-      break;
-    case WeaponType.STAFF:
-      if (adv && combatCard === CombatCard.SLASH) return -1;
-      if (disadv) return -1;
-      break;
-    case WeaponType.GREAT_BLADE:
-      if (adv && combatCard === CombatCard.SLASH) return +3;
-      if (disadv && combatCard === CombatCard.THRUST) return -1;
-      break;
-    case WeaponType.DUAL_STAB:
-      if (adv && combatCard === CombatCard.THRUST) return +1;
-      if (disadv) return -1;
-      break;
+  const p = prof(weapon);
+  for (const r of p.damageRules) {
+    if (r.card !== combatCard) continue;
+    if (r.adv && !isAdvantage(weapon, distance)) continue;
+    if (r.disadv && !isDisadvantage(weapon, distance)) continue;
+    if (r.dist !== undefined && r.dist !== distance) continue;
+    if (r.minDist !== undefined && distance < r.minDist) continue;
+    return r.mod;
   }
-
   return 0;
 }
 
-export function getCostModifier(weapon, distance, combatCard) {
-  const adv = isAdvantage(weapon, distance);
-  if (!adv) return 0;
+// ═══════ 质变机制 ═══════
 
-  switch (weapon) {
-    case WeaponType.SHORT_BLADE:
-      if (combatCard === CombatCard.DODGE) return -1;
-      if (combatCard === CombatCard.THRUST) return -1;
-      break;
-    case WeaponType.SPEAR:
-      if (combatCard === CombatCard.BLOCK) return -1;
-      break;
-    case WeaponType.SWORD:
-      if (combatCard === CombatCard.DEFLECT) return -1;
-      if (combatCard === CombatCard.BLOCK) return -1;
-      break;
-    case WeaponType.STAFF:
-      if (combatCard === CombatCard.BLOCK) return -1;
-      break;
-    case WeaponType.GREAT_BLADE:
-      break;
-    case WeaponType.DUAL_STAB:
-      if (combatCard === CombatCard.THRUST) return -1;
-      if (combatCard === CombatCard.DODGE) return -1;
-      break;
-  }
-  return 0;
+export function dodgeCounterDamage(weapon, distance) {
+  return isAdvantage(weapon, distance) ? prof(weapon).advDodgeCounter : 0;
+}
+
+export function isBlockPerfect(weapon, distance) {
+  return isAdvantage(weapon, distance) && prof(weapon).advBlockPerfect;
+}
+
+export function blockBonusStance(weapon, distance) {
+  return isAdvantage(weapon, distance) ? prof(weapon).advBlockBonusStance : 0;
+}
+
+export function slashBonusStance(weapon, distance) {
+  return isAdvantage(weapon, distance) ? prof(weapon).advSlashBonusStance : 0;
+}
+
+export function blockPushDistance(weapon, distance) {
+  return isAdvantage(weapon, distance) ? prof(weapon).advBlockPushDist : 0;
 }
 
 export function getBlockSlashReduction(weapon, distance) {
-  if (weapon === WeaponType.GREAT_BLADE && isAdvantage(weapon, distance)) {
-    return 2;
-  }
-  return 1;
+  const p = prof(weapon);
+  return p.blockSlashReduction + (isAdvantage(weapon, distance) ? p.advBlockSlashReduction : 0);
 }
+
+export function deflectCausesStagger(weapon) {
+  return prof(weapon).deflectStagger;
+}
+
+export function deflectSelfStanceChange(weapon) {
+  return prof(weapon).deflectSelfStance;
+}
+
+export function getFeintStanceValue(weapon, distance) {
+  const base = 2;
+  return base + (isAdvantage(weapon, distance) ? prof(weapon).advFeintBonusStance : 0);
+}
+
+export function getPushDistance(weapon, distance, combatCard, opponentCard) {
+  if (!isAdvantage(weapon, distance)) return 0;
+  const p = prof(weapon);
+  for (const r of p.pushRules) {
+    if (r.card !== combatCard) continue;
+    if (r.adv && !isAdvantage(weapon, distance)) continue;
+    if (r.vs && r.vs !== opponentCard) continue;
+    return r.push;
+  }
+  return 0;
+}
+
+// ═══════ 通用规则(非兵器特定) ═══════
 
 export function canThrustBreakDodge(thrustWeapon, distance) {
   return isAdvantage(thrustWeapon, distance);
 }
 
-export function deflectCausesStagger(weapon) {
-  return weapon !== WeaponType.SWORD;
-}
-
-export function deflectSelfStanceChange(weapon) {
-  if (weapon === WeaponType.SWORD) return -2;
-  return 0;
-}
-
-export function getFeintStanceValue(weapon, distance) {
-  const base = 2;
-  if (weapon === WeaponType.STAFF && isAdvantage(weapon, distance)) {
-    return base + 1;
-  }
-  if (weapon === WeaponType.SHORT_BLADE && isAdvantage(weapon, distance)) {
-    return base + 1;
-  }
-  if (weapon === WeaponType.DUAL_STAB && isAdvantage(weapon, distance)) {
-    return base + 1;
-  }
-  return base;
-}
-
-export function getPushDistance(weapon, distance, combatCard, opponentCard) {
-  if (weapon === WeaponType.GREAT_BLADE && isAdvantage(weapon, distance)
-      && combatCard === CombatCard.SLASH) {
-    return 1;
-  }
-  if (weapon === WeaponType.STAFF && isAdvantage(weapon, distance)
-      && combatCard === CombatCard.FEINT && opponentCard === CombatCard.BLOCK) {
-    return 1;
-  }
-  return 0;
+export function calcAttackStance(baseStance, attackerWeapon, distance) {
+  if (isDisadvantage(attackerWeapon, distance)) return Math.floor(baseStance / 2);
+  return baseStance;
 }

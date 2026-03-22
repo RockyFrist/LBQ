@@ -1,14 +1,14 @@
-import { WeaponType, CombatCard, DistanceCard, CardType } from './types.js';
+﻿import { WeaponType, CombatCard, DistanceCard, CardType } from './types.js';
 
 // ===== 基础数值（可被 config 覆盖）=====
 // 使用对象以支持运行时修改
 export const gameConfig = {
   MAX_HP: 10,
-  MAX_STAMINA: 8,
-  STAMINA_RECOVERY: 4,
   MAX_STANCE: 5,
   EXECUTION_DAMAGE: 5,
   INITIAL_DISTANCE: 2,
+  MAX_STAMINA: 4,
+  STAMINA_RECOVERY: 1,
 };
 
 export const MIN_DISTANCE = 0;
@@ -17,7 +17,6 @@ export const MAX_DISTANCE = 3;
 export const DISTANCE_NAMES = ['贴身区', '近战区', '中距区', '远距区'];
 
 export const CARD_TYPE_MAP = {
-  [CombatCard.DODGE]: CardType.DEFENSE,
   [CombatCard.DEFLECT]: CardType.DEFENSE,
   [CombatCard.SLASH]: CardType.ATTACK,
   [CombatCard.THRUST]: CardType.ATTACK,
@@ -26,22 +25,21 @@ export const CARD_TYPE_MAP = {
 };
 
 export const COMBAT_CARD_BASE = {
-  [CombatCard.DODGE]:   { cost: 2, damage: 0, stanceToOpponent: 1, priority: 1 },
-  [CombatCard.DEFLECT]: { cost: 3, damage: 2, stanceToOpponent: 2, priority: 2 },
-  [CombatCard.SLASH]:   { cost: 3, damage: 3, stanceToOpponent: 1, priority: 3 },
-  [CombatCard.THRUST]:  { cost: 1, damage: 1, stanceToOpponent: 1, priority: 4 },
-  [CombatCard.BLOCK]:   { cost: 2, damage: 0, stanceToOpponent: 0, priority: 5 },
-  [CombatCard.FEINT]:   { cost: 1, damage: 0, stanceToOpponent: 2, priority: 6 },
+  [CombatCard.DEFLECT]: { cost: 3, staminaCost: 0, damage: 2, stanceToOpponent: 2, priority: 2 },
+  [CombatCard.SLASH]:   { cost: 3, staminaCost: 0, damage: 3, stanceToOpponent: 1, priority: 3 },
+  [CombatCard.THRUST]:  { cost: 1, staminaCost: 0, damage: 1, stanceToOpponent: 1, priority: 4 },
+  [CombatCard.BLOCK]:   { cost: 2, staminaCost: 0, damage: 0, stanceToOpponent: 0, priority: 5 },
+  [CombatCard.FEINT]:   { cost: 1, staminaCost: 0, damage: 0, stanceToOpponent: 2, priority: 6 },
 };
 
 export const DISTANCE_CARD_BASE = {
-  [DistanceCard.ADVANCE]: { cost: 1, delta: -1 },
-  [DistanceCard.RETREAT]: { cost: 1, delta: +1 },
+  [DistanceCard.ADVANCE]: { cost: 2, delta: -1 },
+  [DistanceCard.RETREAT]: { cost: 2, delta: +1 },
   [DistanceCard.HOLD]:    { cost: 0, delta: 0 },
+  [DistanceCard.DODGE]:   { cost: 2, delta: 0 },
 };
 
 export const COMBAT_CARD_NAMES = {
-  [CombatCard.DODGE]: '闪避',
   [CombatCard.DEFLECT]: '卸力',
   [CombatCard.SLASH]: '劈砍',
   [CombatCard.THRUST]: '点刺',
@@ -50,9 +48,10 @@ export const COMBAT_CARD_NAMES = {
 };
 
 export const DISTANCE_CARD_NAMES = {
-  [DistanceCard.ADVANCE]: '进步',
-  [DistanceCard.RETREAT]: '退步',
+  [DistanceCard.ADVANCE]: '冲步',
+  [DistanceCard.RETREAT]: '撤步',
   [DistanceCard.HOLD]: '扎马',
+  [DistanceCard.DODGE]: '闪避',
 };
 
 export const WEAPON_NAMES = {

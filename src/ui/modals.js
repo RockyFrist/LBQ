@@ -1,4 +1,4 @@
-import { WEAPON_EMOJI, WEAPON_NAMES } from '../constants.js';
+﻿import { WEAPON_EMOJI, WEAPON_NAMES } from '../constants.js';
 import { CONFIG_META, CONFIG_DEFAULTS, getCurrentConfig, getConfigDiff,
   saveConfig, resetConfig, applyConfig } from '../config.js';
 import { showToast } from './toast.js';

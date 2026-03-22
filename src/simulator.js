@@ -1,87 +1,8 @@
-import { WeaponType, CombatCard, DistanceCard } from './types.js';
-import { WEAPON_NAMES, WEAPON_EMOJI, gameConfig } from './constants.js';
-import { initGame, executeRound } from './engine/game-engine.js';
-import { aiDecide } from './ai/ai.js';
-import { getAvailableCombatCards, getAvailableDistanceCards } from './engine/card-validator.js';
+﻿import { WeaponType } from './types.js';
+import { WEAPON_NAMES, WEAPON_EMOJI } from './constants.js';
+import { runSimulation } from './engine/simulation.js';
 
 const ALL_WEAPONS = Object.values(WeaponType);
-const MAX_ROUNDS = 50;
-
-function flipState(state, playerAiLevel) {
-  const s = JSON.parse(JSON.stringify(state));
-  const tmp = s.player;
-  s.player = s.ai;
-  s.ai = tmp;
-  s.aiLevel = playerAiLevel;
-  s.history = s.history.map(h => ({
-    round: h.round,
-    playerDistance: h.aiDistance,
-    playerCombat: h.aiCombat,
-    aiDistance: h.playerDistance,
-    aiCombat: h.playerCombat,
-  }));
-  return s;
-}
-
-function getValidAction(action, playerState, distance) {
-  const MAX_STAMINA = gameConfig.MAX_STAMINA;
-  const STAMINA_RECOVERY = gameConfig.STAMINA_RECOVERY;
-  const projected = { ...playerState, stamina: Math.min(MAX_STAMINA, playerState.stamina + STAMINA_RECOVERY) };
-  const validCombat = getAvailableCombatCards(projected, distance);
-  const validDist = getAvailableDistanceCards(projected, distance);
-
-  let combat = action.combatCard;
-  let dist = action.distanceCard;
-
-  if (!combat || !validCombat.includes(combat)) {
-    combat = validCombat.length > 0
-      ? validCombat[Math.floor(Math.random() * validCombat.length)]
-      : CombatCard.BLOCK;
-  }
-  if (!dist || !validDist.includes(dist)) {
-    dist = validDist.length > 0
-      ? validDist[Math.floor(Math.random() * validDist.length)]
-      : DistanceCard.HOLD;
-  }
-
-  return { combatCard: combat, distanceCard: dist };
-}
-
-function runOneGame(playerWeapon, aiWeapon, playerLevel, aiLevel) {
-  let state = initGame(playerWeapon, aiWeapon, aiLevel);
-  let rounds = 0;
-  while (!state.gameOver && rounds < MAX_ROUNDS) {
-    const rawAiAction = aiDecide(state);
-    const flipped = flipState(state, playerLevel);
-    const rawPlayerAction = aiDecide(flipped);
-
-    // Validate: aiDecide may return invalid cards for the actual combatant
-    const playerAction = getValidAction(rawPlayerAction, state.player, state.distance);
-    const aiAction = getValidAction(rawAiAction, state.ai, state.distance);
-
-    state = executeRound(state, playerAction, aiAction);
-    rounds++;
-  }
-  return state.winner || 'draw';
-}
-
-function runSimulation(playerLevel, aiLevel, numGames) {
-  const results = {};
-  for (const w1 of ALL_WEAPONS) {
-    results[w1] = {};
-    for (const w2 of ALL_WEAPONS) {
-      let wins = 0, losses = 0, draws = 0;
-      for (let g = 0; g < numGames; g++) {
-        const winner = runOneGame(w1, w2, playerLevel, aiLevel);
-        if (winner === 'player') wins++;
-        else if (winner === 'ai') losses++;
-        else draws++;
-      }
-      results[w1][w2] = { wins, losses, draws };
-    }
-  }
-  return results;
-}
 
 export function showSimulationModal() {
   const old = document.getElementById('sim-modal');
@@ -152,7 +73,7 @@ export function showSimulationModal() {
     resultsDiv.innerHTML = '<p class="sim-loading">⏳ 模拟运行中…</p>';
 
     setTimeout(() => {
-      const results = runSimulation(pLevel, aLevel, numGames);
+      const results = runSimulation(ALL_WEAPONS, pLevel, aLevel, numGames);
       renderSimResults(resultsDiv, results, numGames, pLevel, aLevel);
     }, 50);
   });
