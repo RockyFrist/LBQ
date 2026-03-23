@@ -2786,3 +2786,174 @@ html, body {
     max-height: none;
   }
 }
+
+/* ════════════════════ 竖屏旋转提示（移动端） ════════════════════ */
+.rotate-overlay {
+  display: none;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .rotate-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #app {
+    display: none;
+  }
+  .rotate-content {
+    text-align: center;
+    animation: rotate-pulse 1.8s ease-in-out infinite;
+  }
+  .rotate-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    display: inline-block;
+    animation: rotate-tilt 1.8s ease-in-out infinite;
+  }
+  .rotate-text {
+    font-size: 1.3rem;
+    color: #e0e6ed;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .rotate-sub {
+    font-size: 1rem;
+    color: var(--gold);
+    font-weight: bold;
+    letter-spacing: 3px;
+  }
+  @keyframes rotate-tilt {
+    0%, 100% { transform: rotate(0deg); }
+    40%       { transform: rotate(90deg); }
+    60%       { transform: rotate(90deg); }
+  }
+  @keyframes rotate-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.85; }
+  }
+}
+
+/* ════════════════════ 移动端横屏紧凑布局 ════════════════════ */
+@media (max-width: 900px) and (orientation: landscape) {
+  /* 整体字号收缩 */
+  html { font-size: 13px; }
+
+  /* 顶部栏压缩 */
+  .top-bar {
+    padding: 4px 10px;
+    gap: 4px;
+  }
+  .game-title { font-size: 0.9rem; letter-spacing: 1px; }
+  .ctrl-btn   { padding: 3px 8px; font-size: 0.72rem; }
+  .round-badge { padding: 2px 8px; font-size: 0.72rem; }
+  .diff-select  { padding: 3px 6px; font-size: 0.72rem; }
+
+  /* 保持三列布局，缩窄侧边栏 */
+  .game-wrapper {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .game-layout {
+    grid-template-columns: minmax(0, 200px) 1fr minmax(0, 200px);
+    gap: 6px;
+    padding: 6px;
+  }
+
+  /* 侧边栏字号 */
+  .side-panel {
+    padding: 6px;
+    gap: 3px;
+    font-size: 0.78rem;
+  }
+  .panel-name   { font-size: 0.82rem; }
+  .weapon-badge { font-size: 0.68rem; }
+  .panel-icon   { font-size: 1rem; }
+
+  /* 状态条 */
+  .stat-row   { font-size: 0.7rem; }
+  .stat-label { font-size: 0.68rem; }
+  .stat-value { font-size: 0.68rem; }
+
+  /* 武器区间条 */
+  .wz-cell    { font-size: 0.62rem; padding: 2px 1px; }
+  .wz-header  { font-size: 0.65rem; }
+
+  /* 卡牌选择 */
+  .dist-card, .combat-card {
+    padding: 4px 6px;
+    font-size: 0.7rem;
+  }
+  .dc-emoji, .cc-emoji { font-size: 0.9rem; }
+  .cc-desc   { font-size: 0.6rem; }
+  .cc-footer { font-size: 0.62rem; }
+  .btn-confirm {
+    padding: 6px;
+    font-size: 0.8rem;
+    margin-top: 4px;
+  }
+  .card-sel-title    { font-size: 0.72rem; }
+  .card-group-label  { font-size: 0.65rem; margin: 3px 0; }
+
+  /* 战斗场景 */
+  .battle-arena { min-height: 100px; }
+  .arena-stage  { height: 120px; }
+  .fighter-body        { font-size: 1.8rem; }
+  .fighter-weapon-icon { font-size: 1.2rem; }
+  .fighter-label       { font-size: 0.6rem; }
+
+  /* 中央区域 */
+  .center-area { gap: 5px; }
+  .situation-hint { padding: 3px 8px; font-size: 0.66rem; }
+  .round-result-banner { font-size: 0.68rem; padding: 3px 8px; }
+  .battle-log   { max-height: 80px; font-size: 0.66rem; }
+  .log-title    { font-size: 0.68rem; }
+
+  /* AI面板 */
+  .ai-last-action .ala-title { font-size: 0.7rem; }
+  .ala-card  { font-size: 0.7rem; padding: 3px 5px; }
+  .history-item { padding: 3px 5px; font-size: 0.66rem; }
+  .h-round  { font-size: 0.68rem; }
+
+  /* 底部栏 */
+  .bottom-bar   { padding: 3px 10px; font-size: 0.65rem; }
+  .rule-summary { gap: 8px; }
+
+  /* 速度控制（斗蛐蛐模式） */
+  .speed-btn  { font-size: 0.65rem; padding: 4px 3px; }
+  .speed-title { font-size: 0.68rem; }
+
+  /* 标题页 */
+  .title-screen h1 { font-size: 1.5rem; margin-bottom: 2px; }
+  .title-screen .subtitle { font-size: 0.75rem; margin-bottom: 16px; }
+  .mode-cards { gap: 10px; }
+  .mode-card  { padding: 16px 10px 12px; }
+  .mc-icon    { font-size: 1.6rem; margin-bottom: 6px; }
+  .mc-name    { font-size: 0.9rem; }
+  .mc-desc    { font-size: 0.68rem; }
+  .title-btns button { padding: 6px 12px; font-size: 0.72rem; }
+
+  /* 武器设置页 */
+  .mode-setup { padding: 16px 12px; }
+  .setup-select { font-size: 0.8rem; padding: 5px 8px; }
+  .primary-btn { font-size: 0.9rem; padding: 8px; }
+  .battle-setup-cols { gap: 8px; }
+
+  /* 区间条带（中央） */
+  .arena-zone-ribbon { font-size: 0.62rem; }
+  .azr-cell { font-size: 0.6rem; padding: 2px; }
+
+  /* 状态提示标签 */
+  .trait-tag { font-size: 0.62rem; padding: 1px 5px; }
+
+  /* 回合结果弹出层 */
+  .game-over-banner { padding: 10px 12px; }
+  .gob-title  { font-size: 1.3rem; }
+  .gob-stats  { font-size: 0.72rem; }
+  .gob-btn    { font-size: 0.78rem; padding: 6px 12px; }
+}
