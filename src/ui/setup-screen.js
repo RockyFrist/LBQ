@@ -23,6 +23,11 @@ export function renderTitleScreen(app, callbacks) {
           <div class="mc-name">自由对战</div>
           <div class="mc-desc">自选兵器与难度<br/>自由切磋，钻研武学</div>
         </div>
+        <div class="mode-card" id="mode-aivai">
+          <div class="mc-icon">🦗</div>
+          <div class="mc-name">斗蛐蛐</div>
+          <div class="mc-desc">AI对决，全程观战<br/>选将押注，坐看风云</div>
+        </div>
       </div>
       <div class="title-btns">
         <button id="btn-title-tutorial">📖 新手引导</button>
@@ -34,6 +39,7 @@ export function renderTitleScreen(app, callbacks) {
 
   document.getElementById('mode-tower').addEventListener('click', callbacks.onTower);
   document.getElementById('mode-battle').addEventListener('click', callbacks.onBattle);
+  document.getElementById('mode-aivai').addEventListener('click', callbacks.onAiVsAi);
   document.getElementById('btn-title-tutorial').addEventListener('click', () => showTutorialPopup());
   document.getElementById('btn-title-sim').addEventListener('click', () => showSimulationModal());
   document.getElementById('btn-title-config').addEventListener('click', () => showConfigModal());
@@ -135,6 +141,84 @@ export function renderTowerWeaponSelect(app, onStart, onBack) {
   }
 
   draw();
+}
+
+// ═══════ AI vs AI Setup ═══════
+
+const AI_LEVEL_OPTIONS = [
+  { value: 1, label: '1 - 菜鸟' },
+  { value: 2, label: '2 - 学徒' },
+  { value: 3, label: '3 - 弟子' },
+  { value: 4, label: '4 - 镖师' },
+  { value: 5, label: '5 - 武师' },
+  { value: 6, label: '6 - 高手' },
+  { value: 7, label: '7 - 宗师' },
+  { value: 8, label: '8 - 绝世' },
+];
+
+export function renderAiVsAiSetup(app, onStart, onBack) {
+  const defaultLeft = WeaponType.SHORT_BLADE;
+  const defaultRight = WeaponType.SPEAR;
+
+  app.innerHTML = `
+    <div class="mode-setup">
+      <button class="back-link" id="btn-back">← 返回</button>
+      <h2>🦗 斗蛐蛐 — 选将观战</h2>
+      <p class="setup-hint">选择双方兵器与AI等级，坐看AI对决</p>
+      <div class="battle-setup-cols">
+        <div class="setup-weapon-col">
+          <div class="setup-col-title">🤖 左方 AI</div>
+          <select id="sel-left-weapon" class="setup-select">
+            ${Object.entries(WEAPON_NAMES).map(([k, v]) =>
+              `<option value="${k}">${WEAPON_EMOJI[k] || ''} ${v}</option>`
+            ).join('')}
+          </select>
+          <div id="left-wz">${buildWeaponZoneStrip(defaultLeft)}</div>
+          <label class="setup-label">AI 等级</label>
+          <select id="sel-left-level" class="setup-select">
+            ${AI_LEVEL_OPTIONS.map(o =>
+              `<option value="${o.value}" ${o.value === 4 ? 'selected' : ''}>${o.label}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="setup-vs">VS</div>
+        <div class="setup-weapon-col">
+          <div class="setup-col-title">🤖 右方 AI</div>
+          <select id="sel-right-weapon" class="setup-select">
+            ${Object.entries(WEAPON_NAMES).map(([k, v]) =>
+              `<option value="${k}">${WEAPON_EMOJI[k] || ''} ${v}</option>`
+            ).join('')}
+          </select>
+          <div id="right-wz">${buildWeaponZoneStrip(defaultRight)}</div>
+          <label class="setup-label">AI 等级</label>
+          <select id="sel-right-level" class="setup-select">
+            ${AI_LEVEL_OPTIONS.map(o =>
+              `<option value="${o.value}" ${o.value === 4 ? 'selected' : ''}>${o.label}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+      <button class="primary-btn" id="btn-start">🦗 开始观战</button>
+    </div>
+  `;
+
+  document.getElementById('sel-right-weapon').value = defaultRight;
+
+  document.getElementById('sel-left-weapon').addEventListener('change', e => {
+    document.getElementById('left-wz').innerHTML = buildWeaponZoneStrip(e.target.value);
+  });
+  document.getElementById('sel-right-weapon').addEventListener('change', e => {
+    document.getElementById('right-wz').innerHTML = buildWeaponZoneStrip(e.target.value);
+  });
+  document.getElementById('btn-start').addEventListener('click', () => {
+    onStart(
+      document.getElementById('sel-left-weapon').value,
+      document.getElementById('sel-right-weapon').value,
+      parseInt(document.getElementById('sel-left-level').value),
+      parseInt(document.getElementById('sel-right-level').value)
+    );
+  });
+  document.getElementById('btn-back').addEventListener('click', onBack);
 }
 
 // ═══════ Standalone Tutorial Popup ═══════

@@ -187,7 +187,8 @@ export async function playRoundAnimation(prevState, newState) {
   // ── 战斗者 emoji 回退到 prevState（避免僵直图标提前出现）──
   const pBodyEl = pFighter.querySelector('.fighter-body');
   const aBodyEl = aFighter.querySelector('.fighter-body');
-  if (pBodyEl) pBodyEl.textContent = prevState.player.staggered ? '😵' : '🧑';
+  const pDefaultEmoji = prevState.spectatorMode ? '🤖' : '🧑';
+  if (pBodyEl) pBodyEl.textContent = prevState.player.staggered ? '😵' : pDefaultEmoji;
   if (aBodyEl) aBodyEl.textContent = prevState.ai.staggered ? '😵' : (prevState.aiName ? '👤' : '🤖');
   const distLine = stage.querySelector('.arena-dist-line');
   const distLabel = stage.querySelector('.arena-dist-label');
@@ -343,7 +344,8 @@ export async function playRoundAnimation(prevState, newState) {
   await wait(900);
 
   // ── 攻防动画结束后，更新僵直 emoji（此时视觉上已能看到受创效果）──
-  if (pBodyEl) pBodyEl.textContent = newState.player.staggered ? '😵' : '🧑';
+  const pNewDefaultEmoji = newState.spectatorMode ? '🤖' : '🧑';
+  if (pBodyEl) pBodyEl.textContent = newState.player.staggered ? '😵' : pNewDefaultEmoji;
   if (aBodyEl) aBodyEl.textContent = newState.ai.staggered ? '😵' : (newState.aiName ? '👤' : '🤖');
 
   // Fade combat tags

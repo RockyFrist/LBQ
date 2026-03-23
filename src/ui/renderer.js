@@ -18,13 +18,18 @@ export { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS };
 
 // ═══════ Render: Game Main UI ═══════
 export function renderGame(app, state, selection, uiState, callbacks) {
+  const spectator = uiState.spectator;
+  const leftPanel = spectator
+    ? buildSpectatorLeftPanel(state, uiState)
+    : buildPlayerPanel(state, selection);
+
   const html = `
     <div class="game-wrapper">
       ${buildTopBar(state, uiState)}
       <div class="game-layout">
-        ${buildPlayerPanel(state, selection)}
+        ${leftPanel}
         ${buildCenterArea(state, uiState)}
-        ${buildAiPanel(state)}
+        ${buildAiPanel(state, spectator)}
       </div>
       ${buildBottomBar()}
     </div>
@@ -37,6 +42,19 @@ export function renderGame(app, state, selection, uiState, callbacks) {
 
 // ─── Top Bar ───
 function buildTopBar(state, uiState) {
+  if (uiState.spectator) {
+    return `
+      <div class="top-bar">
+        <div class="game-title">🦗 斗蛐蛐</div>
+        <div class="top-controls">
+          <button class="ctrl-btn" data-action="tutorial">📚 引导</button>
+          <button class="ctrl-btn" data-action="newgame">🏠 返回</button>
+          <button class="ctrl-btn" data-action="pause">${uiState.isPaused ? '▶️ 继续' : '⏸️ 暂停'}</button>
+          <span class="round-badge">第 ${state.round + 1} 回合</span>
+        </div>
+      </div>
+    `;
+  }
   return `
     <div class="top-bar">
       <div class="game-title">⚔️ 冷刃博弈</div>
@@ -201,15 +219,16 @@ function buildCombatCards(state, selection, projected, availCombat) {
 }
 // ─── Center Area ───
 function buildCenterArea(state, uiState) {
+  const spectator = uiState.spectator;
   return `
     <div class="center-area">
-      ${uiState.isPaused ? '<div class="paused-banner">⏸ 游戏已暂停 — 点击「继续」恢复</div>' : ''}
-      ${buildSituationHint(state)}
+      ${uiState.isPaused ? '<div class="paused-banner">⏸ 已暂停 — 点击「继续」恢复</div>' : ''}
+      ${spectator ? '' : buildSituationHint(state)}
       <div class="arena-wrapper">
-        ${buildBattleArena(state)}
-        ${buildLastRoundResult(state)}
+        ${buildBattleArena(state, spectator)}
+        ${buildLastRoundResult(state, spectator)}
       </div>
-      ${buildArenaZoneRibbon(state)}
+      ${buildArenaZoneRibbon(state, spectator)}
       ${buildBattleLog(state)}
     </div>
   `;
@@ -269,10 +288,12 @@ function buildSituationHint(state) {
   return `<div class="situation-hint">${hints.join('<span class="hint-sep">|</span>')}</div>${traitHtml}`;
 }
 
-function buildArenaZoneRibbon(state) {
+function buildArenaZoneRibbon(state, spectator = false) {
   const pZones = WEAPON_ZONES[state.player.weapon];
   const aZones = WEAPON_ZONES[state.ai.weapon];
   const dist = state.distance;
+  const pIcon = spectator ? '🤖左' : '👤';
+  const aIcon = spectator ? '🤖右' : '🤖';
 
   const buildRow = (label, zones) => {
     const cells = [0, 1, 2, 3].map(d => {
@@ -291,13 +312,13 @@ function buildArenaZoneRibbon(state) {
 
   return `
     <div class="arena-zone-ribbon">
-      ${buildRow('👤', pZones)}
-      ${buildRow('🤖', aZones)}
+      ${buildRow(pIcon, pZones)}
+      ${buildRow(aIcon, aZones)}
     </div>
   `;
 }
 
-function buildBattleArena(state) {
+function buildBattleArena(state, spectator = false) {
   const MAX_HP = gameConfig.MAX_HP;
   const MAX_STANCE = gameConfig.MAX_STANCE;
   const pos = FIGHTER_POSITIONS[state.distance] || FIGHTER_POSITIONS[2];
@@ -309,6 +330,11 @@ function buildBattleArena(state) {
   const lineLeft = pos.player;
   const lineWidth = pos.ai - pos.player;
 
+  const playerLabel = spectator ? '左方' : '玩家';
+  const aiLabel = state.aiName || (spectator ? '右方' : 'AI');
+  const playerBody = state.player.staggered ? '😵' : (spectator ? '🤖' : '🧑');
+  const aiBody = state.ai.staggered ? '😵' : (state.aiName ? '👤' : '🤖');
+
   return `
     <div class="battle-arena">
       <div class="arena-title">⚔️ 战斗场景</div>
@@ -319,8 +345,8 @@ function buildBattleArena(state) {
         <div class="arena-dist-line" style="left:${lineLeft}%;width:${lineWidth}%"></div>
         <div class="fighter player-fighter" id="player-fighter" style="left:${pos.player}%">
           <div class="fighter-weapon-icon">${WEAPON_EMOJI[state.player.weapon] || '🗡️'}</div>
-          <div class="fighter-body">${state.player.staggered ? '😵' : '🧑'}</div>
-          <div class="fighter-label">玩家</div>
+          <div class="fighter-body">${playerBody}</div>
+          <div class="fighter-label">${playerLabel}</div>
           <div class="mini-bars">
             <div class="mini-bar"><div class="mini-bar-fill hp-p" style="width:${pHpPct}%"></div></div>
             <div class="mini-bar"><div class="mini-bar-fill stance-f" style="width:${pStPct}%"></div></div>
@@ -328,8 +354,8 @@ function buildBattleArena(state) {
         </div>
         <div class="fighter ai-fighter" id="ai-fighter" style="left:${pos.ai}%">
           <div class="fighter-weapon-icon">${WEAPON_EMOJI[state.ai.weapon] || '🔱'}</div>
-          <div class="fighter-body">${state.ai.staggered ? '😵' : (state.aiName ? '👤' : '🤖')}</div>
-          <div class="fighter-label">${state.aiName || 'AI'}</div>
+          <div class="fighter-body">${aiBody}</div>
+          <div class="fighter-label">${aiLabel}</div>
           <div class="mini-bars">
             <div class="mini-bar"><div class="mini-bar-fill hp-a" style="width:${aHpPct}%"></div></div>
             <div class="mini-bar"><div class="mini-bar-fill stance-f" style="width:${aStPct}%"></div></div>
@@ -340,9 +366,9 @@ function buildBattleArena(state) {
   `;
 }
 
-function buildLastRoundResult(state) {
+function buildLastRoundResult(state, spectator = false) {
   if (state.history.length === 0) {
-    return `<div class="round-result-banner">等待出牌...</div>`;
+    return `<div class="round-result-banner">${spectator ? '等待开战...' : '等待出牌...'}</div>`;
   }
   const last = state.history[state.history.length - 1];
   const pDistName = DISTANCE_CARD_NAMES[last.playerDistance];
@@ -351,11 +377,12 @@ function buildLastRoundResult(state) {
   const aCombatName = COMBAT_CARD_NAMES[last.aiCombat];
   const pEmoji = COMBAT_CARD_INFO[last.playerCombat] ? COMBAT_CARD_INFO[last.playerCombat].emoji : '';
   const aEmoji = COMBAT_CARD_INFO[last.aiCombat] ? COMBAT_CARD_INFO[last.aiCombat].emoji : '';
+  const pIcon = spectator ? '🤖' : '👤';
 
   return `
     <div class="round-result-banner">
       <span class="rrb-label">第${state.round}回合</span>
-      <span class="rrb-player">👤 ${pDistName}+${pEmoji}${pCombatName}</span>
+      <span class="rrb-player">${pIcon} ${pDistName}+${pEmoji}${pCombatName}</span>
       <span class="rrb-vs">VS</span>
       <span class="rrb-ai">🤖 ${aDistName}+${aEmoji}${aCombatName}</span>
     </div>
@@ -379,33 +406,101 @@ function buildBattleLog(state) {
   `;
 }
 
+// ─── Spectator Left Panel (AI vs AI) ───
+function buildSpectatorLeftPanel(state, uiState) {
+  const p = state.player;
+  const stagger = p.staggered ? '<span class="stagger-badge">⚠ 僵直</span>' : '';
+
+  return `
+    <div class="side-panel player-side">
+      <div class="panel-header">
+        <span class="panel-icon">🤖</span>
+        <span class="panel-name">左方 ${stagger}</span>
+        <span class="weapon-badge">${WEAPON_EMOJI[p.weapon] || ''} ${WEAPON_NAMES[p.weapon]}</span>
+      </div>
+      ${buildStatBars(p, 'player')}
+      ${buildWeaponZoneStrip(p.weapon, state.distance)}
+      <div class="divider"></div>
+      ${buildPlayerLastAction(state)}
+      <div class="divider"></div>
+      ${buildSpeedControls(uiState)}
+    </div>
+  `;
+}
+
+function buildPlayerLastAction(state) {
+  if (state.history.length === 0) {
+    return `
+      <div class="ai-last-action">
+        <div class="ala-title">🀴 左方上回合</div>
+        <div class="ala-waiting">等待第一回合...</div>
+      </div>
+    `;
+  }
+  const last = state.history[state.history.length - 1];
+  const distInfo = DISTANCE_CARD_INFO[last.playerDistance];
+  const combatInfo = COMBAT_CARD_INFO[last.playerCombat];
+  return `
+    <div class="ai-last-action">
+      <div class="ala-title">🀴 左方上回合</div>
+      <div class="ala-cards">
+        <div class="ala-card">${distInfo.emoji} ${DISTANCE_CARD_NAMES[last.playerDistance]}</div>
+        <div class="ala-card">${combatInfo.emoji} ${COMBAT_CARD_NAMES[last.playerCombat]} <span class="cc-type ${combatInfo.type === '攻' ? 'atk' : 'def'}">${combatInfo.type}</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function buildSpeedControls(uiState) {
+  const speeds = [
+    { label: '慢速', value: 2000 },
+    { label: '正常', value: 800 },
+    { label: '快速', value: 100 },
+    { label: '极速', value: 0 },
+  ];
+  return `
+    <div class="speed-controls">
+      <div class="speed-title">⏩ 播放速度</div>
+      <div class="speed-btns">
+        ${speeds.map(s =>
+          `<button class="speed-btn ${uiState.autoPlaySpeed === s.value ? 'active' : ''}" data-speed="${s.value}">${s.label}</button>`
+        ).join('')}
+      </div>
+    </div>
+  `;
+}
+
 // ─── AI Panel (Right) ───
-function buildAiPanel(state) {
+function buildAiPanel(state, spectator = false) {
   const ai = state.ai;
   const stagger = ai.staggered ? '<span class="stagger-badge">⚠ 僵直</span>' : '';
+  const icon = state.aiName ? '👤' : '🤖';
+  const name = state.aiName || (spectator ? '右方' : 'AI');
+  const actionTitle = spectator ? '🀴 右方上回合出牌' : '🀴 AI上回合出牌';
 
   return `
     <div class="side-panel ai-side">
       <div class="panel-header">
-        <span class="panel-icon">${state.aiName ? '👤' : '🤖'}</span>
-        <span class="panel-name">${state.aiName || 'AI'} ${stagger}</span>
+        <span class="panel-icon">${icon}</span>
+        <span class="panel-name">${name} ${stagger}</span>
         <span class="weapon-badge">${WEAPON_EMOJI[ai.weapon] || ''} ${WEAPON_NAMES[ai.weapon]}</span>
       </div>
       ${buildStatBars(ai, 'ai')}
       ${buildWeaponZoneStrip(ai.weapon, state.distance)}
       <div class="divider"></div>
-      ${buildAiLastAction(state)}
+      ${buildAiLastAction(state, actionTitle)}
       <div class="divider"></div>
-      ${buildHistoryPanel(state)}
+      ${buildHistoryPanel(state, spectator)}
     </div>
   `;
 }
 
-function buildAiLastAction(state) {
+function buildAiLastAction(state, title) {
+  const actionTitle = title || '🀴 AI上回合出牌';
   if (state.history.length === 0) {
     return `
       <div class="ai-last-action">
-        <div class="ala-title">🎴 AI上回合出牌</div>
+        <div class="ala-title">${actionTitle}</div>
         <div class="ala-waiting">等待第一回合...</div>
       </div>
     `;
@@ -415,7 +510,7 @@ function buildAiLastAction(state) {
   const combatInfo = COMBAT_CARD_INFO[last.aiCombat];
   return `
     <div class="ai-last-action">
-      <div class="ala-title">🎴 AI上回合出牌</div>
+      <div class="ala-title">${actionTitle}</div>
       <div class="ala-cards">
         <div class="ala-card">${distInfo.emoji} ${DISTANCE_CARD_NAMES[last.aiDistance]}</div>
         <div class="ala-card">${combatInfo.emoji} ${COMBAT_CARD_NAMES[last.aiCombat]} <span class="cc-type ${combatInfo.type === '攻' ? 'atk' : 'def'}">${combatInfo.type}</span></div>
@@ -424,7 +519,9 @@ function buildAiLastAction(state) {
   `;
 }
 
-function buildHistoryPanel(state) {
+function buildHistoryPanel(state, spectator = false) {
+  const pIcon = spectator ? '🤖左' : '👤';
+  const aIcon = spectator ? '🤖右' : '🤖';
   const items = state.history.map((h, i) => {
     const pDist = DISTANCE_CARD_NAMES[h.playerDistance];
     const pCombat = COMBAT_CARD_NAMES[h.playerCombat];
@@ -437,8 +534,8 @@ function buildHistoryPanel(state) {
     return `
       <div class="history-item history-clickable" data-round-idx="${i}" title="点击查看本回合详细解释">
         <div class="h-round">回合 ${i + 1} <span class="h-explain-hint">🔍</span></div>
-        <div class="h-player">👤 ${pDist} + ${pEmoji} ${pCombat}${interrupted}</div>
-        <div class="h-ai">🤖 ${aDist} + ${aEmoji} ${aCombat}${aiInterrupted}</div>
+        <div class="h-player">${pIcon} ${pDist} + ${pEmoji} ${pCombat}${interrupted}</div>
+        <div class="h-ai">${aIcon} ${aDist} + ${aEmoji} ${aCombat}${aiInterrupted}</div>
       </div>
     `;
   }).reverse().join('');
@@ -660,6 +757,13 @@ function bindAllEvents(state, selection, uiState, callbacks) {
       showRoundExplanation(state, idx);
     });
   });
+
+  // Speed controls (spectator mode)
+  document.querySelectorAll('.speed-btn').forEach(el => {
+    el.addEventListener('click', () => {
+      if (callbacks.onSpeedChange) callbacks.onSpeedChange(parseInt(el.dataset.speed));
+    });
+  });
 }
 
 function toggleModal(id, show) {
@@ -682,10 +786,21 @@ function switchTab(tabName) {
 // ═══════ Render: Result Screen ═══════
 export function renderResult(app, state, onRestart, onBack) {
   const MAX_HP = gameConfig.MAX_HP;
+  const spectator = state.spectatorMode;
   let title, cls;
-  if (state.winner === 'player') { title = '🏆 胜利！'; cls = 'win'; }
-  else if (state.winner === 'ai') { title = '💀 败北'; cls = 'lose'; }
-  else { title = '🤝 平局'; cls = 'draw'; }
+  if (spectator) {
+    if (state.winner === 'player') { title = '🏆 左方胜出！'; cls = 'win'; }
+    else if (state.winner === 'ai') { title = '🏆 右方胜出！'; cls = 'lose'; }
+    else { title = '🤝 平局'; cls = 'draw'; }
+  } else {
+    if (state.winner === 'player') { title = '🏆 胜利！'; cls = 'win'; }
+    else if (state.winner === 'ai') { title = '💀 败北'; cls = 'lose'; }
+    else { title = '🤝 平局'; cls = 'draw'; }
+  }
+
+  const pLabel = spectator ? '🤖 左方' : '👤';
+  const aLabel = spectator ? '🤖 右方' : (state.aiName ? '👤' : '🤖');
+  const aName = spectator ? '右方' : (state.aiName || 'AI');
 
   const center = document.querySelector('.center-area');
   if (!center) return;
@@ -696,8 +811,8 @@ export function renderResult(app, state, onRestart, onBack) {
     <div class="gob-title">${title}</div>
     <div class="gob-stats">
       回合${state.round} ｜ 
-      👤 HP ${state.player.hp}/${MAX_HP} ｜ 
-      ${state.aiName ? '👤' : '🤖'} ${state.aiName || 'AI'} HP ${state.ai.hp}/${MAX_HP}
+      ${pLabel} HP ${state.player.hp}/${MAX_HP} ｜ 
+      ${aLabel} ${aName} HP ${state.ai.hp}/${MAX_HP}
     </div>
     <div class="gob-btns">
       <button class="gob-btn restart" id="btn-restart-same">🔄 再来一局</button>

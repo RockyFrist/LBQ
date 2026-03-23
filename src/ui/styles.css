@@ -1780,6 +1780,49 @@ html, body {
   color: var(--gold);
   padding: 0 8px;
 }
+.setup-label {
+  display: block;
+  color: #8899aa;
+  font-size: 0.82rem;
+  margin: 6px 0 4px;
+}
+
+/* ════════════════════ Speed Controls (Spectator) ════════════════════ */
+.speed-controls {
+  padding: 8px 0;
+}
+.speed-title {
+  font-size: 0.82rem;
+  color: #8899aa;
+  margin-bottom: 8px;
+}
+.speed-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.speed-btn {
+  flex: 1;
+  min-width: 50px;
+  padding: 6px 4px;
+  background: rgba(22, 33, 62, 0.7);
+  border: 1px solid #2a3a5c;
+  border-radius: 6px;
+  color: #8899aa;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all .2s;
+}
+.speed-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.speed-btn.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(240, 192, 64, 0.12);
+  font-weight: bold;
+}
 
 /* ════════════════════ Weapon Zone Strip ════════════════════ */
 .wz-strip {

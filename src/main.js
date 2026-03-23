@@ -1,7 +1,7 @@
 ﻿import { initGame, executeRound } from './engine/game-engine.js';
 import { aiDecide } from './ai/ai.js';
 import { renderGame, renderResult, scrollLogToBottom } from './ui/renderer.js';
-import { renderTitleScreen, renderBattleSetup, renderTowerWeaponSelect } from './ui/setup-screen.js';
+import { renderTitleScreen, renderBattleSetup, renderTowerWeaponSelect, renderAiVsAiSetup } from './ui/setup-screen.js';
 import { playRoundAnimation } from './ui/animation.js';
 import { showToast } from './ui/toast.js';
 import { validateAction } from './engine/card-validator.js';
@@ -9,6 +9,7 @@ import { createTowerState, getTowerFloor, advanceTowerFloor, isTowerComplete } f
 import { renderFloorIntro, renderTowerBetween, renderTowerVictory, renderTowerGameOver } from './tower/tower-ui.js';
 import { gameConfig } from './constants.js';
 import { initConfig } from './config.js';
+import { flipState, getValidAction } from './engine/simulation.js';
 
 // 启动时恢复用户配置
 initConfig();
@@ -23,13 +24,24 @@ let isPaused = false;
 let startConfig = null;
 let animating = false;
 
+// ═══════ AI vs AI (spectator) state ═══════
+let spectatorMode = false;
+let playerAiLevel = null;
+let autoPlayTimer = null;
+let autoPlaySpeed = 800;
+
 // ═══════ Tower state ═══════
 let towerState = null;
 let towerFloorData = null;
 
 // ═══════ UI helpers ═══════
 function getUiState() {
-  return { isPaused, canUndo: stateStack.length > 0 };
+  return {
+    isPaused,
+    canUndo: stateStack.length > 0,
+    spectator: spectatorMode,
+    autoPlaySpeed,
+  };
 }
 
 function getCallbacks() {
@@ -41,17 +53,21 @@ function getCallbacks() {
     onNewGame: handleNewGame,
     onTogglePause: handleTogglePause,
     onDifficultyChange: handleDifficultyChange,
+    onSpeedChange: handleSpeedChange,
   };
 }
 
 // ═══════ Title Screen ═══════
 function showTitle() {
   resetGameVars();
+  spectatorMode = false;
+  playerAiLevel = null;
   towerState = null;
   towerFloorData = null;
   renderTitleScreen(app, {
     onTower: () => renderTowerWeaponSelect(app, startTower, showTitle),
     onBattle: () => renderBattleSetup(app, startBattle, showTitle),
+    onAiVsAi: () => renderAiVsAiSetup(app, startAiVsAi, showTitle),
   });
 }
 
@@ -62,6 +78,7 @@ function resetGameVars() {
   stateStack = [];
   isPaused = false;
   animating = false;
+  if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
 }
 
 // ═══════ Free Battle Mode ═══════
@@ -196,7 +213,11 @@ function handleNewGame() {
 
 function handleRestartSame() {
   if (startConfig) {
-    startBattle(startConfig.playerWeapon, startConfig.aiWeapon, startConfig.aiLevel);
+    if (spectatorMode && startConfig.playerAiLevel != null) {
+      startAiVsAi(startConfig.playerWeapon, startConfig.aiWeapon, startConfig.playerAiLevel, startConfig.aiLevel);
+    } else {
+      startBattle(startConfig.playerWeapon, startConfig.aiWeapon, startConfig.aiLevel);
+    }
   } else {
     showTitle();
   }
@@ -206,10 +227,81 @@ function handleTogglePause() {
   if (gameState.gameOver) return;
   isPaused = !isPaused;
   render();
+  if (spectatorMode) {
+    if (isPaused) {
+      if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+    } else {
+      scheduleAutoPlay();
+    }
+  }
 }
 
 function handleDifficultyChange(level) {
   if (gameState) gameState.aiLevel = level;
+}
+
+// ═══════ AI vs AI Spectator Mode ═══════
+function startAiVsAi(leftWeapon, rightWeapon, leftLevel, rightLevel) {
+  towerState = null;
+  resetGameVars();
+  spectatorMode = true;
+  playerAiLevel = leftLevel;
+  autoPlaySpeed = 800;
+
+  gameState = initGame(leftWeapon, rightWeapon, rightLevel);
+  gameState.spectatorMode = true;
+  startConfig = { playerWeapon: leftWeapon, aiWeapon: rightWeapon, aiLevel: rightLevel, playerAiLevel: leftLevel };
+
+  render();
+  scheduleAutoPlay();
+}
+
+function scheduleAutoPlay() {
+  if (autoPlayTimer) { clearTimeout(autoPlayTimer); autoPlayTimer = null; }
+  if (!gameState || gameState.gameOver || isPaused || animating) return;
+  autoPlayTimer = setTimeout(runAutoPlayRound, Math.max(autoPlaySpeed, 50));
+}
+
+async function runAutoPlayRound() {
+  autoPlayTimer = null;
+  if (!gameState || gameState.gameOver || isPaused || animating) return;
+
+  const aiAction = aiDecide(gameState);
+  const flipped = flipState(gameState, playerAiLevel);
+  const rawPlayerAction = aiDecide(flipped);
+
+  const playerAction = getValidAction(rawPlayerAction, gameState.player, gameState.distance);
+  const validAiAction = getValidAction(aiAction, gameState.ai, gameState.distance);
+
+  prevState = JSON.parse(JSON.stringify(gameState));
+  gameState = executeRound(gameState, playerAction, validAiAction);
+
+  animating = true;
+  const wrapper = app.querySelector('.game-wrapper');
+  if (wrapper) wrapper.classList.add('animating');
+
+  render();
+
+  if (autoPlaySpeed > 0) {
+    await playRoundAnimation(prevState, gameState);
+  }
+
+  animating = false;
+  if (wrapper) wrapper.classList.remove('animating');
+
+  if (gameState.gameOver) {
+    renderResult(app, gameState, handleRestartSame, showTitle);
+  } else {
+    scheduleAutoPlay();
+  }
+}
+
+function handleSpeedChange(speed) {
+  autoPlaySpeed = speed;
+  render();
+  if (spectatorMode && !isPaused && !animating && !gameState.gameOver) {
+    scheduleAutoPlay();
+  }
 }
 
 showTitle();
