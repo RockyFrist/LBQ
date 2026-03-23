@@ -4,10 +4,79 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>冷刃博弈 — 中国传统冷兵器对战</title>
-  <script type="module" crossorigin src="/assets/index-CCE_5oAB.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DBVqZgHy.css">
+  <script type="module" crossorigin src="/LBQ/assets/index-CH9b9aWr.js"></script>
+  <link rel="stylesheet" crossorigin href="/LBQ/assets/index-DhW6pQpb.css">
 </head>
 <body>
-  <div id="app"></div>
+  <!-- 移动端入口遮罩（JS控制） -->
+  <div id="mobile-overlay">
+    <div class="muo-inner">
+      <div class="muo-phone" id="muo-anim">📱</div>
+      <div class="muo-title">⚔️ 冷刃博弈</div>
+      <p class="muo-desc">以「身法控距」为核心的回合制冷兵器对战</p>
+      <button id="btn-enter-fullscreen" class="muo-btn">▶ 进入横屏游戏</button>
+      <p class="muo-hint">将自动全屏并尝试锁定横屏<br/>若无效请手动旋转设备</p>
+    </div>
+  </div>
+  <div id="app"></div>
+  <script>
+  (function () {
+    function isMobile() {
+      return ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+        && Math.min(screen.width, screen.height) < 640;
+    }
+    if (!isMobile()) {
+      document.getElementById('mobile-overlay').style.display = 'none';
+      return;
+    }
+    var overlay = document.getElementById('mobile-overlay');
+    var anim    = document.getElementById('muo-anim');
+
+    function isPortrait() { return window.innerHeight > window.innerWidth; }
+
+    function setFL(on) {
+      document.documentElement.classList.toggle('force-landscape', on);
+      document.body.classList.toggle('force-landscape', on);
+    }
+
+    function updateOverlay() {
+      if (document.body.classList.contains('force-landscape')) {
+        overlay.style.display = 'none'; return;
+      }
+      overlay.style.display = isPortrait() ? 'flex' : 'none';
+    }
+
+    document.getElementById('btn-enter-fullscreen').addEventListener('click', async function () {
+      // 第一步：全屏
+      var el  = document.documentElement;
+      var fsR = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+      if (fsR) { try { await fsR.call(el); } catch (e) {} }
+
+      // 第二步：锁定横屏（Android Chrome 最有效）
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock('landscape');
+          overlay.style.display = 'none';
+          return;       // 成功：真实横屏，不需CSS旋转
+        }
+      } catch (e) {}
+
+      // 第三步：回退 — CSS寽罗旋转（iOS无法锁屏时）
+      setFL(true);
+      overlay.style.display = 'none';
+    });
+
+    window.addEventListener('orientationchange', function () {
+      setTimeout(function () {
+        if (!isPortrait()) { setFL(false); }  // 真实旋转成山，去掉CSS旋转
+        updateOverlay();
+      }, 350);
+    });
+    window.addEventListener('resize', updateOverlay);
+
+    // 已在横屏则直接进入
+    if (!isPortrait()) { overlay.style.display = 'none'; }
+  })();
+  </script>
 </body>
 </html>

@@ -2773,7 +2773,7 @@ html, body {
 ::-webkit-scrollbar-thumb { background: #3a4a5c; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #4a5a6c; }
 
-/* ════════════════════ Responsive ════════════════════ */
+/* ════════════════════ Responsive (桌面/大屏板) ════════════════════ */
 @media (max-width: 1100px) {
   .game-wrapper {
     height: auto;
@@ -2787,76 +2787,109 @@ html, body {
   }
 }
 
-/* ════════════════════ 竖屏旋转提示（移动端） ════════════════════ */
-.rotate-overlay {
-  display: none;
+/* ════════════════════ 移动端入口遮罩 ════════════════════ */
+#mobile-overlay {
+  display: none; /* JS 控制 */
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.muo-inner   { text-align: center; padding: 20px; }
+.muo-phone   {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+  display: inline-block;
+  animation: muo-tilt 2.2s ease-in-out infinite;
+}
+.muo-title   { font-size: 1.7rem; color: var(--gold); font-weight: bold; letter-spacing: 3px; margin-bottom: 8px; }
+.muo-desc    { font-size: 0.9rem; color: #8899aa; margin-bottom: 28px; line-height: 1.6; }
+.muo-btn {
+  display: block;
+  padding: 14px 40px;
+  background: linear-gradient(135deg, rgba(240,192,64,.2), rgba(240,192,64,.06));
+  border: 2px solid var(--gold);
+  border-radius: 12px;
+  color: var(--gold);
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0 auto 14px;
+  transition: all .2s;
+}
+.muo-btn:active { transform: scale(.94); }
+.muo-hint { font-size: 0.72rem; color: #445566; line-height: 1.7; }
+@keyframes muo-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  35%       { transform: rotate(80deg) translateX(4px); }
+  65%       { transform: rotate(80deg) translateX(4px); }
 }
 
-@media (max-width: 900px) and (orientation: portrait) {
-  .rotate-overlay {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-  }
-  #app {
-    display: none;
-  }
-  .rotate-content {
-    text-align: center;
-    animation: rotate-pulse 1.8s ease-in-out infinite;
-  }
-  .rotate-icon {
-    font-size: 4rem;
-    margin-bottom: 16px;
-    display: inline-block;
-    animation: rotate-tilt 1.8s ease-in-out infinite;
-  }
-  .rotate-text {
-    font-size: 1.3rem;
-    color: #e0e6ed;
-    line-height: 1.7;
-    margin-bottom: 12px;
-  }
-  .rotate-sub {
-    font-size: 1rem;
-    color: var(--gold);
-    font-weight: bold;
-    letter-spacing: 3px;
-  }
-  @keyframes rotate-tilt {
-    0%, 100% { transform: rotate(0deg); }
-    40%       { transform: rotate(90deg); }
-    60%       { transform: rotate(90deg); }
-  }
-  @keyframes rotate-pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.85; }
-  }
+/* ════════════════════ CSS强制横屏（iOS回退方案） ════════════════════ */
+/* 将竖屏的 #app 旋转 -90°，视觉上就是横屏 */
+html.force-landscape { font-size: 12px; overflow: hidden; }
+body.force-landscape { overflow: hidden; }
+body.force-landscape #app {
+  position: fixed;
+  top: 0; left: 0;
+  /* 宽 = 竖屏高度、高 = 竖屏宽度 */
+  width:  100dvh;
+  height: 100dvw;
+  transform-origin: top left;
+  /* 计算验证：(x,y) → (dvw-y, x) 就是节 */
+  transform: translateX(100dvw) rotate(-90deg);
+  overflow: hidden;
 }
+/* 覆盖 1100px 断点的单列布局 */
+body.force-landscape .game-wrapper {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+body.force-landscape .game-layout {
+  grid-template-columns: minmax(0, 185px) 1fr minmax(0, 185px) !important;
+  gap: 6px !important;
+  padding: 6px !important;
+}
+body.force-landscape .side-panel {
+  overflow-y: scroll !important;
+  -webkit-overflow-scrolling: touch !important;
+  max-height: none !important;
+  padding: 6px !important;
+  gap: 3px !important;
+  font-size: 0.78rem !important;
+}
+body.force-landscape .center-area {
+  max-height: none !important;
+  overflow-y: auto !important;
+  gap: 4px !important;
+}
+/* 布局细节 */
+body.force-landscape .top-bar    { padding: 4px 10px !important; gap: 4px !important; }
+body.force-landscape .game-title  { font-size: 0.9rem !important; }
+body.force-landscape .ctrl-btn    { padding: 3px 8px !important; font-size: 0.72rem !important; }
+body.force-landscape .round-badge { padding: 2px 8px !important; font-size: 0.72rem !important; }
+body.force-landscape .arena-stage { height: 120px !important; }
+body.force-landscape .fighter-body { font-size: 1.8rem !important; }
+body.force-landscape .battle-log   { max-height: 80px !important; font-size: 0.66rem !important; }
+body.force-landscape .btn-confirm  { padding: 6px !important; font-size: 0.8rem !important; }
+body.force-landscape .bottom-bar   { padding: 3px 10px !important; font-size: 0.65rem !important; }
 
-/* ════════════════════ 移动端横屏紧凑布局 ════════════════════ */
+/* ════════════════════ 移动端真实横屏紧凑布局 ════════════════════ */
 @media (max-width: 900px) and (orientation: landscape) {
-  /* 整体字号收缩 */
   html { font-size: 13px; }
 
-  /* 顶部栏压缩 */
-  .top-bar {
-    padding: 4px 10px;
-    gap: 4px;
-  }
-  .game-title { font-size: 0.9rem; letter-spacing: 1px; }
-  .ctrl-btn   { padding: 3px 8px; font-size: 0.72rem; }
+  .top-bar { padding: 4px 10px; gap: 4px; }
+  .game-title  { font-size: 0.9rem; letter-spacing: 1px; }
+  .ctrl-btn    { padding: 3px 8px; font-size: 0.72rem; }
   .round-badge { padding: 2px 8px; font-size: 0.72rem; }
-  .diff-select  { padding: 3px 6px; font-size: 0.72rem; }
+  .diff-select { padding: 3px 6px; font-size: 0.72rem; }
 
-  /* 保持三列布局，缩窄侧边栏 */
+  /* ★ 用 dvh 避免浏览器地址栏占用高度 */
   .game-wrapper {
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
   }
   .game-layout {
@@ -2865,71 +2898,61 @@ html, body {
     padding: 6px;
   }
 
-  /* 侧边栏字号 */
+  /* ★ 修复 iOS 触摸滚动 */
   .side-panel {
     padding: 6px;
     gap: 3px;
     font-size: 0.78rem;
+    overflow-y: scroll;              /* scroll > auto on iOS */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
+  .center-area {
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
   .panel-name   { font-size: 0.82rem; }
   .weapon-badge { font-size: 0.68rem; }
   .panel-icon   { font-size: 1rem; }
-
-  /* 状态条 */
   .stat-row   { font-size: 0.7rem; }
   .stat-label { font-size: 0.68rem; }
   .stat-value { font-size: 0.68rem; }
-
-  /* 武器区间条 */
   .wz-cell    { font-size: 0.62rem; padding: 2px 1px; }
   .wz-header  { font-size: 0.65rem; }
 
-  /* 卡牌选择 */
-  .dist-card, .combat-card {
-    padding: 4px 6px;
-    font-size: 0.7rem;
-  }
+  .dist-card, .combat-card { padding: 4px 6px; font-size: 0.7rem; }
   .dc-emoji, .cc-emoji { font-size: 0.9rem; }
   .cc-desc   { font-size: 0.6rem; }
   .cc-footer { font-size: 0.62rem; }
-  .btn-confirm {
-    padding: 6px;
-    font-size: 0.8rem;
-    margin-top: 4px;
-  }
-  .card-sel-title    { font-size: 0.72rem; }
-  .card-group-label  { font-size: 0.65rem; margin: 3px 0; }
+  .btn-confirm { padding: 6px; font-size: 0.8rem; margin-top: 4px; }
+  .card-sel-title   { font-size: 0.72rem; }
+  .card-group-label { font-size: 0.65rem; margin: 3px 0; }
 
-  /* 战斗场景 */
   .battle-arena { min-height: 100px; }
   .arena-stage  { height: 120px; }
   .fighter-body        { font-size: 1.8rem; }
   .fighter-weapon-icon { font-size: 1.2rem; }
   .fighter-label       { font-size: 0.6rem; }
 
-  /* 中央区域 */
   .center-area { gap: 5px; }
-  .situation-hint { padding: 3px 8px; font-size: 0.66rem; }
-  .round-result-banner { font-size: 0.68rem; padding: 3px 8px; }
-  .battle-log   { max-height: 80px; font-size: 0.66rem; }
-  .log-title    { font-size: 0.68rem; }
+  .situation-hint       { padding: 3px 8px; font-size: 0.66rem; }
+  .round-result-banner  { font-size: 0.68rem; padding: 3px 8px; }
+  .battle-log  { max-height: 80px; font-size: 0.66rem; }
+  .log-title   { font-size: 0.68rem; }
 
-  /* AI面板 */
   .ai-last-action .ala-title { font-size: 0.7rem; }
-  .ala-card  { font-size: 0.7rem; padding: 3px 5px; }
-  .history-item { padding: 3px 5px; font-size: 0.66rem; }
-  .h-round  { font-size: 0.68rem; }
+  .ala-card      { font-size: 0.7rem; padding: 3px 5px; }
+  .history-item  { padding: 3px 5px; font-size: 0.66rem; }
+  .h-round       { font-size: 0.68rem; }
 
-  /* 底部栏 */
   .bottom-bar   { padding: 3px 10px; font-size: 0.65rem; }
   .rule-summary { gap: 8px; }
-
-  /* 速度控制（斗蛐蛐模式） */
-  .speed-btn  { font-size: 0.65rem; padding: 4px 3px; }
+  .speed-btn   { font-size: 0.65rem; padding: 4px 3px; }
   .speed-title { font-size: 0.68rem; }
 
-  /* 标题页 */
-  .title-screen h1 { font-size: 1.5rem; margin-bottom: 2px; }
+  .title-screen h1        { font-size: 1.5rem; margin-bottom: 2px; }
   .title-screen .subtitle { font-size: 0.75rem; margin-bottom: 16px; }
   .mode-cards { gap: 10px; }
   .mode-card  { padding: 16px 10px 12px; }
@@ -2938,22 +2961,17 @@ html, body {
   .mc-desc    { font-size: 0.68rem; }
   .title-btns button { padding: 6px 12px; font-size: 0.72rem; }
 
-  /* 武器设置页 */
   .mode-setup { padding: 16px 12px; }
   .setup-select { font-size: 0.8rem; padding: 5px 8px; }
-  .primary-btn { font-size: 0.9rem; padding: 8px; }
+  .primary-btn  { font-size: 0.9rem; padding: 8px; }
   .battle-setup-cols { gap: 8px; }
 
-  /* 区间条带（中央） */
   .arena-zone-ribbon { font-size: 0.62rem; }
-  .azr-cell { font-size: 0.6rem; padding: 2px; }
+  .azr-cell   { font-size: 0.6rem; padding: 2px; }
+  .trait-tag  { font-size: 0.62rem; padding: 1px 5px; }
 
-  /* 状态提示标签 */
-  .trait-tag { font-size: 0.62rem; padding: 1px 5px; }
-
-  /* 回合结果弹出层 */
   .game-over-banner { padding: 10px 12px; }
-  .gob-title  { font-size: 1.3rem; }
-  .gob-stats  { font-size: 0.72rem; }
-  .gob-btn    { font-size: 0.78rem; padding: 6px 12px; }
-}
+  .gob-title { font-size: 1.3rem; }
+  .gob-stats { font-size: 0.72rem; }
+  .gob-btn   { font-size: 0.78rem; padding: 6px 12px; }
+}
