@@ -15,6 +15,7 @@ const DEFAULTS = {
   advSlashBonusStance: 0,   // 优势区劈砍命中额外架势
   advBlockPushDist: 0,      // 优势区格挡推距
   advFeintBonusStance: 0,   // 优势区虚晃额外架势
+  dodgeCostReduction: 0,     // 闪避体力消耗减免
   damageRules: [],          // 伤害修正规则 [{adv, disadv, dist, minDist, card, mod}]
   pushRules: [],            // 推距规则 [{card, vs, adv, push}]
 };
@@ -23,6 +24,7 @@ const WEAPON_PROFILES = {
   [WeaponType.SHORT_BLADE]: {
     advDodgeCounter: 1,
     advFeintBonusStance: 1,
+    dodgeCostReduction: 1,
     damageRules: [
       { minDist: 3, card: CombatCard.SLASH, mod: -3 },
     ],
@@ -66,6 +68,7 @@ const WEAPON_PROFILES = {
   },
   [WeaponType.DUAL_STAB]: {
     advFeintBonusStance: 1,
+    dodgeCostReduction: 1,
     damageRules: [
       { adv: true, card: CombatCard.THRUST, mod: +1 },
       { disadv: true, card: CombatCard.SLASH, mod: -3 },
@@ -141,8 +144,12 @@ export function deflectSelfStanceChange(weapon) {
 }
 
 export function getFeintStanceValue(weapon, distance) {
-  const base = 2;
+  const base = 3;
   return base + (isAdvantage(weapon, distance) ? prof(weapon).advFeintBonusStance : 0);
+}
+
+export function getDodgeCostReduction(weapon) {
+  return prof(weapon).dodgeCostReduction;
 }
 
 export function getPushDistance(weapon, distance, combatCard, opponentCard) {

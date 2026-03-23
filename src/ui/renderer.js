@@ -2,7 +2,7 @@
 import { COMBAT_CARD_NAMES, DISTANCE_CARD_NAMES, WEAPON_NAMES, DISTANCE_NAMES,
   gameConfig, WEAPON_ZONES, COMBAT_CARD_BASE, CARD_TYPE_MAP, WEAPON_EMOJI, DISTANCE_CARD_BASE } from '../constants.js';
 import { getAvailableCombatCards, getAvailableDistanceCards } from '../engine/card-validator.js';
-import { getDamageModifier } from '../engine/weapon.js';
+import { getDamageModifier, getDodgeCostReduction } from '../engine/weapon.js';
 import { getActiveTraits, explainCombatMatchup } from '../engine/combat-explain.js';
 import { buildGuideContent, buildRulesContent } from './tutorial-content.js';
 import { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS,
@@ -126,11 +126,15 @@ function buildOneBar(label, type, val, max, danger) {
 function buildDistanceCards(state, selection, projected, availDist) {
   const p = state.player;
   const dist = state.distance;
-  return Object.values(DistanceCard).map(card => {
+  const cardOrder = [DistanceCard.ADVANCE, DistanceCard.RETREAT, DistanceCard.HOLD, DistanceCard.DODGE];
+  return cardOrder.map(card => {
     const avail = availDist.includes(card);
     const sel = selection.distanceCard === card;
     const info = DISTANCE_CARD_INFO[card];
-    const cost = DISTANCE_CARD_BASE[card]?.cost ?? 0;
+    let cost = DISTANCE_CARD_BASE[card]?.cost ?? 0;
+    if (card === DistanceCard.DODGE && p.weapon) {
+      cost = Math.max(0, cost - getDodgeCostReduction(p.weapon));
+    }
 
     const tips = [info.desc];
     if (cost > 0) tips.push(`耗${cost}体力`);

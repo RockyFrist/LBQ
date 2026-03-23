@@ -509,6 +509,8 @@ html, body {
   gap: 4px;
   backdrop-filter: blur(6px);
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   min-height: 0;
 }
 .side-panel.player-side { border-left: 3px solid var(--green); }
@@ -639,9 +641,10 @@ html, body {
 .cost-preview .cost-val { color: var(--blue); font-weight: bold; }
 .cost-preview .cost-warn { color: var(--danger); font-weight: bold; }
 
-/* Distance cards: horizontal compact row */
+/* Distance cards: 2×2 grid */
 .cards-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 4px;
 }
 .dist-card {
@@ -1830,16 +1833,33 @@ html, body {
 .wz-here { visibility: visible; }
 .wz-traits {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   flex-wrap: wrap;
 }
 .wz-trait {
-  font-size: 0.65rem;
-  padding: 1px 6px;
+  font-size: 0.62rem;
+  padding: 1px 5px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   color: #8899aa;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
+.wz-cat-label {
+  font-size: 0.55rem;
+  font-weight: bold;
+  padding: 0 3px;
+  border-radius: 2px;
+  line-height: 1.4;
+}
+/* Category colors */
+.wz-cat-core { color: #e0c870; background: rgba(224, 200, 112, 0.1); }
+.wz-cat-core .wz-cat-label { background: rgba(224, 200, 80, 0.3); color: #e0c870; }
+.wz-cat-buff { color: #70c8a0; background: rgba(112, 200, 160, 0.1); }
+.wz-cat-buff .wz-cat-label { background: rgba(80, 200, 140, 0.25); color: #70c8a0; }
+.wz-cat-weak { color: #888; background: rgba(128, 128, 128, 0.08); }
+.wz-cat-weak .wz-cat-label { background: rgba(128, 128, 128, 0.2); color: #999; }
 
 /* ════════════════════ Weapon Picker Grid ════════════════════ */
 .weapon-pick-grid {

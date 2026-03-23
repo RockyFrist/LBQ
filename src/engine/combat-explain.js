@@ -1,6 +1,6 @@
 import { CombatCard, WeaponType } from '../types.js';
-import { COMBAT_CARD_NAMES, WEAPON_NAMES, WEAPON_EMOJI, WEAPON_ZONES } from '../constants.js';
-import { isAdvantage, isDisadvantage, getDamageModifier } from './weapon.js';
+import { COMBAT_CARD_NAMES, COMBAT_CARD_BASE, WEAPON_NAMES, WEAPON_EMOJI, WEAPON_ZONES } from '../constants.js';
+import { isAdvantage, isDisadvantage, getDamageModifier, getBlockSlashReduction, isBlockPerfect } from './weapon.js';
 
 /**
  * 获取当前武器在指定距离下生效的特性标签
@@ -122,27 +122,41 @@ function explainPair(lines, attacker, defender, aWeapon, dWeapon, dist, label) {
     } else if (defender === CombatCard.THRUST) {
       lines.push(`${label}卸力 vs 点刺 → <strong>卸力失败</strong>（点刺穿透卸力），卸力方受点刺伤害+1架势`);
     } else if (defender === CombatCard.FEINT) {
-      lines.push(`${label}卸力 vs 虚晃 → <strong>卸力被骗</strong>，卸力方+2架势`);
+      lines.push(`${label}卸力 vs 虚晃 → <strong>卸力识破！</strong>虚晃方+2架势`);
     } else if (defender === CombatCard.BLOCK) {
       lines.push(`${label}卸力 vs 格挡 → <strong>卸力落空</strong>，卸力方+1架势`);
     }
   } else if (attacker === CombatCard.SLASH) {
+    const baseDmg = COMBAT_CARD_BASE[CombatCard.SLASH].damage;
+    const mod = getDamageModifier(aWeapon, dist, CombatCard.SLASH);
+    const dmg = Math.max(0, baseDmg + mod);
+    const dmgNote = mod < 0 ? `（势区惩罚${mod}，实际${dmg}伤）` : '';
     if (defender === CombatCard.THRUST) {
-      lines.push(`${label}劈砍 vs 点刺 → <strong>劈砍克制点刺！</strong>点刺方受劈砍全伤+1架势，劈砍方不受伤`);
+      lines.push(`${label}劈砍 vs 点刺 → <strong>劈砍克制点刺！</strong>点刺方受${dmg}伤+1架势${dmgNote}`);
     } else if (defender === CombatCard.BLOCK) {
-      lines.push(`${label}劈砍 vs 格挡 → <strong>劈砍破格挡</strong>，格挡方减免1伤后仍受伤+1架势`);
+      const reduction = getBlockSlashReduction(dWeapon, dist);
+      if (isBlockPerfect(dWeapon, dist)) {
+        lines.push(`${label}劈砍 vs 格挡 → <strong>完美格挡！</strong>格挡方完全免伤${dmgNote}`);
+      } else {
+        const afterBlock = Math.max(0, dmg - reduction);
+        lines.push(`${label}劈砍 vs 格挡 → <strong>劈砍破格挡</strong>，格挡方减免${reduction}伤后受${afterBlock}伤+1架势${dmgNote}`);
+      }
     } else if (defender === CombatCard.FEINT) {
-      lines.push(`${label}劈砍 vs 虚晃 → <strong>劈砍命中！</strong>虚晃方受劈砍全伤+1架势`);
+      lines.push(`${label}劈砍 vs 虚晃 → <strong>劈砍命中！</strong>虚晃方受${dmg}伤+1架势${dmgNote}`);
     }
   } else if (attacker === CombatCard.THRUST) {
+    const baseDmg = COMBAT_CARD_BASE[CombatCard.THRUST].damage;
+    const mod = getDamageModifier(aWeapon, dist, CombatCard.THRUST);
+    const dmg = Math.max(0, baseDmg + mod);
+    const dmgNote = mod !== 0 ? `（距离修正${mod > 0 ? '+' : ''}${mod}，实际${dmg}伤）` : '';
     if (defender === CombatCard.BLOCK) {
       lines.push(`${label}点刺 vs 格挡 → <strong>格挡完全抵消</strong>点刺，无伤害`);
     } else if (defender === CombatCard.FEINT) {
-      lines.push(`${label}点刺 vs 虚晃 → <strong>点刺命中！</strong>虚晃方受点刺伤+1架势`);
+      lines.push(`${label}点刺 vs 虚晃 → <strong>点刺命中！</strong>虚晃方受${dmg}伤+1架势${dmgNote}`);
     }
   } else if (attacker === CombatCard.BLOCK) {
     if (defender === CombatCard.FEINT) {
-      lines.push(`${label}格挡 vs 虚晃 → <strong>格挡被虚晃骗</strong>，格挡方+2架势`);
+      lines.push(`${label}格挡 vs 虚晃 → <strong>格挡被虚晃骗</strong>，格挡方+3架势`);
     }
   }
 }

@@ -114,15 +114,14 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
   }
 
   if (pCard === CombatCard.DEFLECT && aCard === CombatCard.FEINT) {
-    const st = calcAttackStance(2, aW, dist);
-    fx.player.stanceChange += st;
-    fx.log.push(`玩家卸力被虚晃骗：+${st}架势`);
+    // 卸力识破虚晃：虚晃方受到架势惩罚
+    fx.ai.stanceChange += 2;
+    fx.log.push('玩家卸力识破虚晃：AI+2架势');
     return;
   }
   if (aCard === CombatCard.DEFLECT && pCard === CombatCard.FEINT) {
-    const st = calcAttackStance(2, pW, dist);
-    fx.ai.stanceChange += st;
-    fx.log.push(`AI卸力被虚晃骗：+${st}架势`);
+    fx.player.stanceChange += 2;
+    fx.log.push('AI卸力识破虚晃：玩家+2架势');
     return;
   }
 

@@ -73,12 +73,14 @@ export function renderBattleSetup(app, onStart, onBack) {
       <div class="setup-row-center">
         <label>AI 难度</label>
         <select id="sel-level" class="setup-select">
-          <option value="1">1 - 纯随机</option>
-          <option value="2">2 - 基础规则</option>
-          <option value="3" selected>3 - 简单策略</option>
-          <option value="4">4 - 普通策略</option>
-          <option value="5">5 - 高级策略</option>
-          <option value="6">6 - 顶级高手</option>
+          <option value="1">1 - 菜鸟</option>
+          <option value="2">2 - 学徒</option>
+          <option value="3">3 - 弟子</option>
+          <option value="4" selected>4 - 镖师</option>
+          <option value="5">5 - 武师</option>
+          <option value="6">6 - 高手</option>
+          <option value="7">7 - 宗师</option>
+          <option value="8">8 - 绝世</option>
         </select>
       </div>
       <button class="primary-btn" id="btn-start">开始对局</button>

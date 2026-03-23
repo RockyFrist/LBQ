@@ -1,5 +1,6 @@
 ﻿import { CombatCard, DistanceCard, CardType } from '../types.js';
 import { COMBAT_CARD_BASE, CARD_TYPE_MAP, WEAPON_ZONES, MIN_DISTANCE, MAX_DISTANCE, gameConfig, DISTANCE_CARD_BASE } from '../constants.js';
+import { getDodgeCostReduction } from './weapon.js';
 
 export function getAvailableCombatCards(playerState, distance, reservedStamina = 0) {
   const { weapon, staggered, stamina } = playerState;
@@ -12,15 +13,18 @@ export function getAvailableCombatCards(playerState, distance, reservedStamina =
 }
 
 export function getAvailableDistanceCards(playerState, distance) {
-  const { stamina } = playerState;
+  const { stamina, weapon } = playerState;
   const allCards = Object.values(DistanceCard);
 
   return allCards.filter(card => {
     if (card === DistanceCard.HOLD) return true;
     if (card === DistanceCard.ADVANCE && distance <= MIN_DISTANCE) return false;
     if (card === DistanceCard.RETREAT && distance >= MAX_DISTANCE) return false;
-    // 体力不足无法使用冲步/撤步
-    const cost = DISTANCE_CARD_BASE[card]?.cost ?? 0;
+    // 体力不足无法使用冲步/撤步/闪避
+    let cost = DISTANCE_CARD_BASE[card]?.cost ?? 0;
+    if (card === DistanceCard.DODGE && weapon) {
+      cost = Math.max(0, cost - getDodgeCostReduction(weapon));
+    }
     if (stamina < cost) return false;
     return true;
   });

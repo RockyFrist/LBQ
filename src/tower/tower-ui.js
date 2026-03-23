@@ -52,7 +52,7 @@ export function renderTowerBetween(app, towerState, prevHp, onContinue) {
   const MAX_HP = gameConfig.MAX_HP;
   const floorNum = towerState.currentFloor;
   const prevFloor = TOWER_FLOORS[floorNum - 1];
-  const actualHeal = Math.min(HP_RECOVERY_PER_FLOOR, MAX_HP - prevHp);
+  const actualHeal = MAX_HP - prevHp;
 
   const nextFloor = TOWER_FLOORS[floorNum];
   let nextPreview = '';
@@ -73,7 +73,7 @@ export function renderTowerBetween(app, towerState, prevHp, onContinue) {
       <div class="tower-floor-header">✅ 第 ${floorNum} 关 — 胜利!</div>
       <div class="tower-between-msg">${prevFloor.npc} 已被击败</div>
       <div class="tower-between-hp">
-        ❤️ 恢复气血 <span class="heal">+${actualHeal}</span>
+        ❤️ 恢复气血 <span class="heal">已回满</span>
         <br/>
         ❤️ 当前气血: ${prevHp} → <strong>${towerState.playerHp}</strong> / ${MAX_HP}
       </div>

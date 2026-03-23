@@ -12,9 +12,9 @@ export const WeaponType = Object.freeze({
 
 /** 身法卡 */
 export const DistanceCard = Object.freeze({
+  HOLD: 'hold',
   ADVANCE: 'advance',
   RETREAT: 'retreat',
-  HOLD: 'hold',
   DODGE: 'dodge',
 });
 

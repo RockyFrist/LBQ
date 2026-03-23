@@ -2,7 +2,7 @@
 import { gameConfig, WEAPON_ZONES, MAX_DISTANCE, MIN_DISTANCE, DISTANCE_CARD_BASE, COMBAT_CARD_BASE, CARD_TYPE_MAP } from '../constants.js';
 import { resolveDistance } from './distance.js';
 import { resolveCombat, resolveOneSided } from './combat.js';
-import { canThrustBreakDodge, dodgeCounterDamage, calcAttackStance } from './weapon.js';
+import { canThrustBreakDodge, dodgeCounterDamage, calcAttackStance, getDodgeCostReduction } from './weapon.js';
 
 export function initGame(playerWeapon, aiWeapon, aiLevel) {
   const state = createGameState(playerWeapon, aiWeapon, aiLevel);
@@ -57,9 +57,11 @@ function stepDistanceResolve(s, pDist, aDist) {
 
   s.distance = resolveDistance(oldDist, pDist, aDist);
 
-  // 体力消耗：冲步/撤步/闪避各耗2点
-  const pCost = DISTANCE_CARD_BASE[pDist]?.cost ?? 0;
-  const aCost = DISTANCE_CARD_BASE[aDist]?.cost ?? 0;
+  // 体力消耗：冲步/撤步/闪避各耗2点（短刀/双刺闪避减1）
+  let pCost = DISTANCE_CARD_BASE[pDist]?.cost ?? 0;
+  let aCost = DISTANCE_CARD_BASE[aDist]?.cost ?? 0;
+  if (pDist === DistanceCard.DODGE) pCost = Math.max(0, pCost - getDodgeCostReduction(s.player.weapon));
+  if (aDist === DistanceCard.DODGE) aCost = Math.max(0, aCost - getDodgeCostReduction(s.ai.weapon));
   s.player.stamina = Math.max(0, s.player.stamina - pCost);
   s.ai.stamina = Math.max(0, s.ai.stamina - aCost);
   if (pCost > 0) s.log.push(`玩家身法消耗：-${pCost}体力`);
@@ -79,7 +81,10 @@ function stepCombatResolve(s, pCombat, aCombat) {
 
   // 同时判定双方闪避结果（基于原始攻防卡）
   if (pDodging) {
-    if (aCombat && CARD_TYPE_MAP[aCombat] === CardType.ATTACK) {
+    if (aCombat === 'feint') {
+      // 虚晃穿透闪避：虚晃不被闪避规避，闪避落空
+      s.log.push('🎭 AI虚晃穿透闪避！玩家闪避落空');
+    } else if (aCombat && CARD_TYPE_MAP[aCombat] === CardType.ATTACK) {
       if (aCombat === 'thrust' && canThrustBreakDodge(s.ai.weapon, s.distance)) {
         pCascade = true;
         s.log.push('⚡ 玩家闪避被AI点刺打断(优势区)！攻防卡取消');
@@ -105,7 +110,10 @@ function stepCombatResolve(s, pCombat, aCombat) {
   }
 
   if (aDodging) {
-    if (pCombat && CARD_TYPE_MAP[pCombat] === CardType.ATTACK) {
+    if (pCombat === 'feint') {
+      // 虚晃穿透闪避：虚晃不被闪避规避，闪避落空
+      s.log.push('🎭 玩家虚晃穿透闪避！AI闪避落空');
+    } else if (pCombat && CARD_TYPE_MAP[pCombat] === CardType.ATTACK) {
       if (pCombat === 'thrust' && canThrustBreakDodge(s.player.weapon, s.distance)) {
         aCascade = true;
         s.log.push('⚡ AI闪避被玩家点刺打断(优势区)！攻防卡取消');
