@@ -11,25 +11,25 @@ const COLLISION_FX = {
   [`${CombatCard.SLASH}_${CombatCard.DEFLECT}`]:  { pAnim: 'anim-recoil',   aAnim: 'anim-deflect',    spark: '🤺', desc: '被卸力反制!' },
   [`${CombatCard.DEFLECT}_${CombatCard.THRUST}`]: { pAnim: 'anim-deflect-fail', aAnim: 'anim-thrust-p', spark: '🎯', desc: '卸力失败' },
   [`${CombatCard.THRUST}_${CombatCard.DEFLECT}`]: { pAnim: 'anim-thrust-p', aAnim: 'anim-deflect-fail', spark: '🎯', desc: '穿透卸力' },
-  [`${CombatCard.DEFLECT}_${CombatCard.FEINT}`]:  { pAnim: 'anim-deflect-fail', aAnim: 'anim-feint-a', spark: '🌀', desc: '虚晃骗卸力' },
-  [`${CombatCard.FEINT}_${CombatCard.DEFLECT}`]:  { pAnim: 'anim-feint-p', aAnim: 'anim-deflect-fail', spark: '🌀', desc: '虚晃骗卸力' },
-  // ── 劈砍 vs X ──
+  [`${CombatCard.DEFLECT}_${CombatCard.FEINT}`]:  { pAnim: 'anim-deflect-fail', aAnim: 'anim-feint-a', spark: '🌀', desc: '擒拿骗卸力' },
+  [`${CombatCard.FEINT}_${CombatCard.DEFLECT}`]:  { pAnim: 'anim-feint-p', aAnim: 'anim-deflect-fail', spark: '🌀', desc: '擒拿骗卸力' },
+  // ── 重击 vs X ──
   [`${CombatCard.SLASH}_${CombatCard.SLASH}`]:    { pAnim: 'anim-clash-p',  aAnim: 'anim-clash-a',    spark: '⚡', desc: '互砍!' },
-  [`${CombatCard.SLASH}_${CombatCard.THRUST}`]:   { pAnim: 'anim-slash-p',  aAnim: 'anim-hit',        spark: '⚡', desc: '劈砍命中' },
+  [`${CombatCard.SLASH}_${CombatCard.THRUST}`]:   { pAnim: 'anim-slash-p',  aAnim: 'anim-hit',        spark: '⚡', desc: '重击命中' },
   [`${CombatCard.THRUST}_${CombatCard.SLASH}`]:   { pAnim: 'anim-hit',      aAnim: 'anim-slash-a',    spark: '⚡', desc: '被劈中' },
-  [`${CombatCard.SLASH}_${CombatCard.BLOCK}`]:    { pAnim: 'anim-slash-p',  aAnim: 'anim-block-hit',  spark: '🛡️', desc: '劈砍破格挡' },
+  [`${CombatCard.SLASH}_${CombatCard.BLOCK}`]:    { pAnim: 'anim-slash-p',  aAnim: 'anim-block-hit',  spark: '🛡️', desc: '重击破格挡' },
   [`${CombatCard.BLOCK}_${CombatCard.SLASH}`]:    { pAnim: 'anim-block-hit', aAnim: 'anim-slash-a',   spark: '🛡️', desc: '格挡被破' },
-  [`${CombatCard.SLASH}_${CombatCard.FEINT}`]:    { pAnim: 'anim-slash-p',  aAnim: 'anim-hit',        spark: '⚡', desc: '劈砍命中' },
+  [`${CombatCard.SLASH}_${CombatCard.FEINT}`]:    { pAnim: 'anim-slash-p',  aAnim: 'anim-hit',        spark: '⚡', desc: '重击命中' },
   [`${CombatCard.FEINT}_${CombatCard.SLASH}`]:    { pAnim: 'anim-hit',      aAnim: 'anim-slash-a',    spark: '⚡', desc: '被劈中' },
-  // ── 点刺 vs X ──
+  // ── 轻击 vs X ──
   [`${CombatCard.THRUST}_${CombatCard.THRUST}`]:  { pAnim: 'anim-thrust-p', aAnim: 'anim-thrust-a',   spark: '🎯', desc: '互刺!' },
   [`${CombatCard.THRUST}_${CombatCard.BLOCK}`]:   { pAnim: 'anim-thrust-miss', aAnim: 'anim-block',   spark: '🛡️', desc: '被格挡' },
   [`${CombatCard.BLOCK}_${CombatCard.THRUST}`]:   { pAnim: 'anim-block',    aAnim: 'anim-thrust-miss', spark: '🛡️', desc: '格挡成功' },
-  [`${CombatCard.THRUST}_${CombatCard.FEINT}`]:   { pAnim: 'anim-thrust-p', aAnim: 'anim-hit',        spark: '🎯', desc: '点刺命中' },
-  [`${CombatCard.FEINT}_${CombatCard.THRUST}`]:   { pAnim: 'anim-hit',      aAnim: 'anim-thrust-a',   spark: '🎯', desc: '被点刺' },
-  // ── 格挡 vs 虚晃 ──
-  [`${CombatCard.BLOCK}_${CombatCard.FEINT}`]:    { pAnim: 'anim-block-tricked', aAnim: 'anim-feint-a', spark: '🌀', desc: '虚晃骗格挡' },
-  [`${CombatCard.FEINT}_${CombatCard.BLOCK}`]:    { pAnim: 'anim-feint-p', aAnim: 'anim-block-tricked', spark: '🌀', desc: '虚晃骗格挡' },
+  [`${CombatCard.THRUST}_${CombatCard.FEINT}`]:   { pAnim: 'anim-thrust-p', aAnim: 'anim-hit',        spark: '🎯', desc: '轻击命中' },
+  [`${CombatCard.FEINT}_${CombatCard.THRUST}`]:   { pAnim: 'anim-hit',      aAnim: 'anim-thrust-a',   spark: '🎯', desc: '被轻击' },
+  // ── 格挡 vs 擒拿 ──
+  [`${CombatCard.BLOCK}_${CombatCard.FEINT}`]:    { pAnim: 'anim-block-tricked', aAnim: 'anim-feint-a', spark: '🌀', desc: '擒拿骗格挡' },
+  [`${CombatCard.FEINT}_${CombatCard.BLOCK}`]:    { pAnim: 'anim-feint-p', aAnim: 'anim-block-tricked', spark: '🌀', desc: '擒拿骗格挡' },
   // ── 同类/空过 ──
   [`${CombatCard.BLOCK}_${CombatCard.BLOCK}`]:    { pAnim: 'anim-block',    aAnim: 'anim-block',      spark: null, desc: '双挡空过' },
   [`${CombatCard.FEINT}_${CombatCard.FEINT}`]:    { pAnim: 'anim-idle',     aAnim: 'anim-idle',       spark: null, desc: '双晃空过' },

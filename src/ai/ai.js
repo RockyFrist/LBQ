@@ -64,21 +64,21 @@ function directionToAdvantage(weapon, currentDist) {
   return currentDist > avg ? DistanceCard.ADVANCE : DistanceCard.RETREAT;
 }
 
-// ═══════ 新克制表（方案A：虚晃克闪避+格挡, 卸力克劈砍+虚晃）═══════
-// 劈砍 赢 点刺/虚晃, 输 卸力
-// 点刺 赢 卸力/虚晃, 输 劈砍/格挡
-// 格挡 赢 点刺, 输 劈砍/虚晃
-// 卸力 赢 劈砍/虚晃, 输 点刺
-// 虚晃 赢 格挡/闪避, 输 劈砍/点刺/卸力
+// ═══════ 新克制表（方案A：擒拿克闪避+格挡, 卸力克重击+擒拿）═══════
+// 重击 赢 轻击/擒拿, 输 卸力
+// 轻击 赢 卸力/擒拿, 输 重击/格挡
+// 格挡 赢 轻击, 输 重击/擒拿
+// 卸力 赢 重击/擒拿, 输 轻击
+// 擒拿 赢 格挡/闪避, 输 重击/轻击/卸力
 
 function getCounter(opCard, available) {
   // 返回当前新规则下对指定卡的最优克制
   const map = {
     [CombatCard.SLASH]:   [CombatCard.DEFLECT, CombatCard.BLOCK],  // 卸力大胜, 格挡减伤
-    [CombatCard.THRUST]:  [CombatCard.BLOCK, CombatCard.SLASH],    // 格挡完抵, 劈砍碾压
-    [CombatCard.FEINT]:   [CombatCard.DEFLECT, CombatCard.SLASH, CombatCard.THRUST], // 卸力识破, 劈砍/点刺直伤
-    [CombatCard.BLOCK]:   [CombatCard.FEINT, CombatCard.SLASH],    // 虚晃骗, 劈砍破
-    [CombatCard.DEFLECT]: [CombatCard.THRUST, CombatCard.BLOCK],   // 点刺穿透, 格挡无伤
+    [CombatCard.THRUST]:  [CombatCard.BLOCK, CombatCard.SLASH],    // 格挡完抵, 重击碾压
+    [CombatCard.FEINT]:   [CombatCard.DEFLECT, CombatCard.SLASH, CombatCard.THRUST], // 卸力识破, 重击/轻击直伤
+    [CombatCard.BLOCK]:   [CombatCard.FEINT, CombatCard.SLASH],    // 擒拿骗, 重击破
+    [CombatCard.DEFLECT]: [CombatCard.THRUST, CombatCard.BLOCK],   // 轻击穿透, 格挡无伤
   };
   const choices = map[opCard] || [];
   for (const c of choices) {
@@ -257,7 +257,7 @@ function aiLevel3(state) {
     combatCard = CombatCard.BLOCK;
   }
 
-  // 对手僵直→劈砍
+  // 对手僵直→重击
   if (!combatCard && state.player.staggered) {
     const atk = [CombatCard.SLASH].filter(c => combatCards.includes(c));
     if (atk.length) combatCard = atk[0];
@@ -296,7 +296,7 @@ function aiLevel3(state) {
 }
 
 // ═══════ Level 4 — 镖局镖师（老练战斗）═══════
-// 3回合频率分析，65%反制。连招链(虚晃→劈砍)。体力管理+闪避。
+// 3回合频率分析，65%反制。连招链(擒拿→重击)。体力管理+闪避。
 function aiLevel4(state) {
   const { distCards, combatCards } = getAvail(state);
   const weapon = state.ai.weapon;
@@ -319,7 +319,7 @@ function aiLevel4(state) {
     combatCard = CombatCard.BLOCK;
   }
 
-  // 僵直惩罚→劈砍
+  // 僵直惩罚→重击
   if (!combatCard && state.player.staggered) {
     if (combatCards.includes(CombatCard.SLASH)) combatCard = CombatCard.SLASH;
   }
@@ -330,14 +330,14 @@ function aiLevel4(state) {
     if (pressure.length) combatCard = pressure[0];
   }
 
-  // 连招链：上回合虚晃成功骗出格挡/卸力→这回合劈砍
+  // 连招链：上回合擒拿成功骗出格挡/卸力→这回合重击
   if (!combatCard && lastRound) {
     if (lastRound.aiCombat === CombatCard.FEINT
       && (lastRound.playerCombat === CombatCard.BLOCK || lastRound.playerCombat === CombatCard.DEFLECT)
       && combatCards.includes(CombatCard.SLASH)) {
       combatCard = CombatCard.SLASH;
     }
-    // 上回合劈砍被卸力→改用点刺
+    // 上回合重击被卸力→改用轻击
     if (!combatCard && lastRound.aiCombat === CombatCard.SLASH
       && lastRound.playerCombat === CombatCard.DEFLECT
       && combatCards.includes(CombatCard.THRUST)) {
@@ -385,7 +385,7 @@ function aiLevel5(state) {
   if (history.length >= 3) {
     const distFreq = analyzePlayerDist(history, 4);
     const playerLikesDodge = distFreq[DistanceCard.DODGE] >= 2;
-    // 对手喜欢闪避→虚晃能穿透闪避，优先虚晃（在攻防卡选择中体现）
+    // 对手喜欢闪避→擒拿能穿透闪避，优先擒拿（在攻防卡选择中体现）
     // 对手喜欢冲步→考虑撤步保持距离
     if (distFreq[DistanceCard.ADVANCE] >= 3 && distCards.includes(DistanceCard.RETREAT)) {
       distCard = DistanceCard.RETREAT;
@@ -437,7 +437,7 @@ function aiLevel5(state) {
       && combatCards.includes(CombatCard.THRUST)) {
       combatCard = CombatCard.THRUST;
     }
-    // 上回合对手闪避→这回合虚晃穿透
+    // 上回合对手闪避→这回合擒拿穿透
     if (!combatCard && lastRound.playerDistance === DistanceCard.DODGE && combatCards.includes(CombatCard.FEINT)) {
       if (Math.random() < 0.6) combatCard = CombatCard.FEINT;
     }
@@ -488,7 +488,7 @@ function aiLevel6(state) {
   let distCard;
   if (history.length >= 3) {
     const distFreq = analyzePlayerDist(history, 5);
-    // 对手频繁闪避→保持距离出虚晃
+    // 对手频繁闪避→保持距离出擒拿
     if (distFreq[DistanceCard.DODGE] >= 2) {
       if (isAdvantage(weapon, dist)) distCard = DistanceCard.HOLD;
       else distCard = directionToAdvantage(weapon, dist);
@@ -535,20 +535,20 @@ function aiLevel6(state) {
 
   // 多层连招
   if (!combatCard && lastRound) {
-    // 虚晃→劈砍 (对手上回合被骗出防御)
+    // 擒拿→重击 (对手上回合被骗出防御)
     if (lastRound.aiCombat === CombatCard.FEINT
       && (lastRound.playerCombat === CombatCard.BLOCK || lastRound.playerCombat === CombatCard.DEFLECT)) {
       combatCard = combatCards.includes(CombatCard.SLASH) ? CombatCard.SLASH : null;
     }
-    // 劈砍被卸力→点刺穿透
+    // 重击被卸力→轻击穿透
     if (!combatCard && lastRound.aiCombat === CombatCard.SLASH && lastRound.playerCombat === CombatCard.DEFLECT) {
       combatCard = combatCards.includes(CombatCard.THRUST) ? CombatCard.THRUST : null;
     }
-    // 点刺被格挡→虚晃破格挡
+    // 轻击被格挡→擒拿破格挡
     if (!combatCard && lastRound.aiCombat === CombatCard.THRUST && lastRound.playerCombat === CombatCard.BLOCK) {
       combatCard = combatCards.includes(CombatCard.FEINT) ? CombatCard.FEINT : null;
     }
-    // 对手上回合闪避→这回合虚晃穿透
+    // 对手上回合闪避→这回合擒拿穿透
     if (!combatCard && lastRound.playerDistance === DistanceCard.DODGE) {
       if (combatCards.includes(CombatCard.FEINT) && Math.random() < 0.7) combatCard = CombatCard.FEINT;
     }
@@ -708,7 +708,7 @@ function aiLevel8(state) {
   // 分析玩家身法倾向
   if (history.length >= 3) {
     const distFreq = analyzePlayerDist(history, 5);
-    // 对手频繁闪避→占位不动（虚晃穿透闪避）
+    // 对手频繁闪避→占位不动（擒拿穿透闪避）
     if (distFreq[DistanceCard.DODGE] >= 2 && aiInAdv) {
       distCard = DistanceCard.HOLD;
     }
@@ -753,7 +753,7 @@ function aiLevel8(state) {
     if (safe.length) combatCard = pick(safe);
   }
 
-  // 僵直→劈砍（无风险最大伤害）
+  // 僵直→重击（无风险最大伤害）
   if (!combatCard && state.player.staggered) {
     combatCard = combatCards.includes(CombatCard.SLASH) ? CombatCard.SLASH : null;
   }

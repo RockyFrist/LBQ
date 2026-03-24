@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 教程和规则内容 — 单一数据来源
  * 同时被 renderer.js（游戏内弹窗）和 setup-screen.js（标题页弹窗）共享
  */
@@ -22,29 +22,29 @@ export function buildGuideContent() {
     <h4>⚔️ 5张攻防卡 · 一句话说明</h4>
     <table class="tutorial-table">
       <tr><th>卡牌</th><th>类型</th><th>一句话</th></tr>
-      <tr><td>🤺 卸力</td><td>防守</td><td>克劈砍(反打2伤+僵直)＋识破虚晃(对手+2架势)。遇其他牌吃亏</td></tr>
-      <tr><td>⚡ 劈砍</td><td>攻击</td><td>重击3伤，克制点刺和虚晃，但怕卸力</td></tr>
-      <tr><td>🎯 点刺</td><td>攻击</td><td>快攻1伤，穿透卸力，但被劈砍完克、被格挡抵消</td></tr>
-      <li><strong>🛡️ 格挡</strong></td><td>防守</td><td>完全挡住点刺，减1点劈砍伤害，但被虚晃骗+3架势</li>
-      <tr><td>🌀 虚晃</td><td>攻击</td><td>0伤害但给对手+3架势，克格挡和闪避，怕劈砍和卸力</td></tr>
+      <tr><td>🤺 卸力</td><td>防守</td><td>克重击(反打2伤+僵直)＋识破擒拿(对手+2架势)。遇其他牌吃亏</td></tr>
+      <tr><td>⚡ 重击</td><td>攻击</td><td>重击3伤，克制轻击和擒拿，但怕卸力</td></tr>
+      <tr><td>🎯 轻击</td><td>攻击</td><td>快攻1伤，穿透卸力，但被重击完克、被格挡抵消</td></tr>
+      <li><strong>🛡️ 格挡</strong></td><td>防守</td><td>完全挡住轻击，减1点重击伤害，但被擒拿骗+3架势</li>
+      <tr><td>🌀 擒拿</td><td>攻击</td><td>0伤害但给对手+3架势，克格挡和闪避，怕重击和卸力</td></tr>
     </table>
 
     <h4>🔄 核心克制链 · 记住这个就够了</h4>
     <div class="tutorial-chain">
-      <p><strong>⚡劈砍</strong> → 克 → 🎯点刺、🌀虚晃、🛡️格挡(破防)</p>
-      <p><strong>🎯点刺</strong> → 克 → 🤺卸力、🌀虚晃</p>
-      <p><strong>🤺卸力</strong> → 克 → ⚡劈砍 (反制2伤+僵直)、🌀虚晃 (识破+2架势)</p>
-      <p><strong>🛡️格挡</strong> → 克 → 🎯点刺 (完全抵消)</p>
-      <p><strong>🌀虚晃</strong> → 克 → 🛡️格挡 (骗出+3架势)、💨闪避 (穿透闪避)</p>
-      <p><strong>💨闪避</strong>(身法卡) → 闪开对手劈砍/点刺，但<strong>无法闪避虚晃</strong>，同时自己的攻防卡照常生效</p>
+      <p><strong>⚡重击</strong> → 克 → 🎯轻击、🌀擒拿、🛡️格挡(破防)</p>
+      <p><strong>🎯轻击</strong> → 克 → 🤺卸力、🌀擒拿</p>
+      <p><strong>🤺卸力</strong> → 克 → ⚡重击 (反制2伤+僵直)、🌀擒拿 (识破+2架势)</p>
+      <p><strong>🛡️格挡</strong> → 克 → 🎯轻击 (完全抵消)</p>
+      <p><strong>🌀擒拿</strong> → 克 → 🛡️格挡 (骗出+3架势)、💨闪避 (穿透闪避)</p>
+      <p><strong>💨闪避</strong>(身法卡) → 闪开对手重击/轻击，但<strong>无法闪避擒拿</strong>，同时自己的攻防卡照常生效</p>
     </div>
 
     <h4>⚠️ 容易被忽略的重要规则</h4>
     <ul>
       <li><strong>💨 闪避</strong>：闪避与冲步/撤步/扎马互斥。闪避消耗<strong>2体力</strong>（短刀/双刺仅耗1），但可以同时出一张攻防卡。</li>
-      <li><strong>闪避成功</strong>：对手的劈砍/点刺被无效化，你的攻防卡照常生效（可能单方面命中对手！）。</li>
-      <li><strong>虚晃穿透闪避</strong>：对手出虚晃时，你的闪避会<strong>落空</strong>！体力白耗。</li>
-      <li><strong>闪避被打断</strong>：对手在<strong>优势区使用点刺</strong>可以打断闪避，且你的攻防卡也会被<strong>连带取消</strong>（级联打断）。</li>
+      <li><strong>闪避成功</strong>：对手的重击/轻击被无效化，你的攻防卡照常生效（可能单方面命中对手！）。</li>
+      <li><strong>擒拿穿透闪避</strong>：对手出擒拿时，你的闪避会<strong>落空</strong>！体力白耗。</li>
+      <li><strong>闪避被打断</strong>：对手在<strong>优势区使用轻击</strong>可以打断闪避，且你的攻防卡也会被<strong>连带取消</strong>（级联打断）。</li>
       <li><strong>身法打断</strong>：如果你在移动（冲步/撤步）的同时被攻击命中扣血，你的移动会被<strong>取消</strong>！距离回到移动前的位置。</li>
       <li><strong>劣势区架势减半</strong>：在劣势区攻击时，造成的架势效果<strong>减半</strong>（向下取整）。劣势区进攻只能割血，无法有效累积架势。</li>
       <li><strong>架势 → 处决</strong>：架势累计到5点自动触发「处决」<strong>扣5血</strong>，然后架势清零。管好架势比管血更重要！</li>
@@ -54,12 +54,12 @@ export function buildGuideContent() {
 
     <h4>🏹 兵器一览</h4>
     <ul>
-      <li><strong>� 短刀</strong>：优势区0-1 | 点刺破闪避，闪避反击1伤，闪避仅耗1体力 | 远距劈砍几乎无效</li>
-      <li><strong>🔱 长枪</strong>：优势区2-3 | 劈砍+2伤，劈砍额外+1架势，格挡弹枪推1距 | 贴身劈砍几乎无力</li>
-      <li><strong>⚔️ 剑</strong>：优势区1-2 | 卸力不僵直改为自身-2架势，完美格挡(劈砍免伤) | 贴身/远距劈砍削弱</li>
-      <li><strong>🏏 棍</strong>：优势区1-3(最广) | 虚晃+3架势+推距，劈砍额外+2架势，格挡震退+1架势 | 贴身劈砍无力</li>
-      <li><strong>🪓 大刀</strong>：优势区仅2 | 劈砍+3伤(全场最高)+推1距，格挡额外减伤 | 贴身劈砍无力</li>
-      <li><strong>🥢 双刺</strong>：优势区仅0 | 贴身点刺追击+1伤，闪避+2架势，闪避仅耗1体力，贴身命中+1架势 | 远距攻击大幅削弱</li>
+      <li><strong>� 短刀</strong>：优势区0-1 | 轻击破闪避，闪避反击1伤，闪避仅耗1体力 | 远距重击几乎无效</li>
+      <li><strong>🔱 长枪</strong>：优势区2-3 | 重击+2伤，重击额外+1架势，格挡弹枪推1距 | 贴身重击几乎无力</li>
+      <li><strong>⚔️ 剑</strong>：优势区1-2 | 卸力不僵直改为自身-2架势，完美格挡(重击免伤) | 贴身/远距重击削弱</li>
+      <li><strong>🏏 棍</strong>：优势区1-3(最广) | 擒拿+3架势+推距，重击额外+2架势，格挡震退+1架势 | 贴身重击无力</li>
+      <li><strong>🪓 大刀</strong>：优势区仅2 | 重击+3伤(全场最高)+推1距，格挡额外减伤 | 贴身重击无力</li>
+      <li><strong>🥢 双刺</strong>：优势区仅0 | 贴身轻击追击+1伤，闪避+2架势，闪避仅耗1体力，贴身命中+1架势 | 远距攻击大幅削弱</li>
     </ul>
 
     <h4>💡 操作提示</h4>
@@ -100,23 +100,23 @@ export function buildRulesContent() {
     <ul>
       <li>闪避是<strong>身法卡</strong>，与冲步/撤步/扎马互斥，选了闪避就不能移动。</li>
       <li>选择闪避后<strong>仍然要选一张攻防卡</strong>（5选1）。</li>
-      <li>闪避成功：对手的<strong>劈砍/点刺被无效化</strong>，你的攻防卡<strong>照常生效</strong>（可能单方面命中！）。对手的防御卡仍有效。</li>
-      <li><strong>虚晃穿透闪避</strong>：对手出虚晃时，你的闪避会<strong>落空</strong>，体力白耗。</li>
-      <li><strong>优势区点刺破闪避</strong>：当点刺方处于自身兵器优势区时，点刺可无视闪避直接命中。</li>
-      <li><strong>级联打断</strong>：闪避被点刺打断时，你的攻防卡也会被<strong>连带取消</strong>！</li>
+      <li>闪避成功：对手的<strong>重击/轻击被无效化</strong>，你的攻防卡<strong>照常生效</strong>（可能单方面命中！）。对手的防御卡仍有效。</li>
+      <li><strong>擒拿穿透闪避</strong>：对手出擒拿时，你的闪避会<strong>落空</strong>，体力白耗。</li>
+      <li><strong>优势区轻击破闪避</strong>：当轻击方处于自身兵器优势区时，轻击可无视闪避直接命中。</li>
+      <li><strong>级联打断</strong>：闪避被轻击打断时，你的攻防卡也会被<strong>连带取消</strong>！</li>
     </ul>
 
     <h4>⚡ 身法打断机制</h4>
     <ul>
       <li>本回合选了冲步或撤步的一方，如果在攻防结算中<strong>受到了HP伤害</strong>，其身法移动会被<strong>取消</strong></li>
       <li>距离会回退到该方没有移动的状态（另一方的移动照常生效）</li>
-      <li>例：玩家冲步+点刺 vs AI撤步+卸力 → 点刺穿透卸力 → AI受伤 → <strong>AI的撤步被取消</strong></li>
+      <li>例：玩家冲步+轻击 vs AI撤步+卸力 → 轻击穿透卸力 → AI受伤 → <strong>AI的撤步被取消</strong></li>
       <li>扎马不受影响（没有移动就无法被打断）</li>
     </ul>
 
     <h4>🎭 架势 · 处决 · 僵直</h4>
     <ul>
-      <li>被攻击/虚晃命中 → 架势值累加</li>
+      <li>被攻击/擒拿命中 → 架势值累加</li>
       <li>架势值<strong>≥5</strong>时立即触发「处决」：<strong>扣5血</strong>，架势归零</li>
       <li>被卸力反制 → 进入<strong>僵直</strong>（下回合所有攻击卡禁用）</li>
       <li>剑的卸力例外：成功后<strong>不造成僵直</strong>，改为自身架势-2</li>
@@ -127,7 +127,7 @@ export function buildRulesContent() {
       <li>体力上限<strong>4</strong>，每回合结束恢复<strong>1</strong>点（扎马额外+1 = 恢复2）</li>
       <li>身法消耗：冲步/撤步/<strong>闪避</strong>各2体力，扎马0体力</li>
       <li>闪避是身法卡，与移动互斥，共享体力池</li>
-      <li>攻防卡（卸力、劈砍、点刺、格挡、虚晃）不消耗体力</li>
+      <li>攻防卡（卸力、重击、轻击、格挡、擒拿）不消耗体力</li>
       <li><strong>劣势区架势减半</strong>：劣势区攻击命中时，造成的架势效果减半（向下取整）</li>
     </ul>
 
@@ -148,12 +148,12 @@ export function buildRulesContent() {
 function buildRulesMatrix() {
   return `
     <table class="rules-matrix">
-      <tr><th>我方＼对手</th><th>🤺卸力</th><th>⚡劈砍</th><th>🎯点刺</th><th>🛡️格挡</th><th>🌀虚晃</th></tr>
-      <tr><td><strong>🤺卸力</strong></td><td>各+2架势</td><td class="rule-win">反制！对手受2伤+2架势+僵直</td><td class="rule-lose">被刺穿：受点刺伤+1架势</td><td class="rule-lose">浪费：自身+1架势</td><td class="rule-win">识破！对手+2架势</td></tr>
-      <tr><td><strong>⚡劈砍</strong></td><td class="rule-lose">被反制！受2伤+2架势+僵直</td><td>互砍各受伤</td><td class="rule-win">命中！对手受3伤+1架势</td><td class="rule-win">破防！减1伤后命中</td><td class="rule-win">命中！对手受3伤+1架势</td></tr>
-      <tr><td><strong>🎯点刺</strong></td><td class="rule-win">穿透！对手受1伤+1架势</td><td class="rule-lose">被克：受3伤+1架势</td><td>互刺各受伤</td><td class="rule-lose">被挡：完全抵消</td><td class="rule-win">命中！对手受1伤+1架势</td></tr>
+      <tr><th>我方＼对手</th><th>🤺卸力</th><th>⚡重击</th><th>🎯轻击</th><th>🛡️格挡</th><th>🌀擒拿</th></tr>
+      <tr><td><strong>🤺卸力</strong></td><td>各+2架势</td><td class="rule-win">反制！对手受2伤+2架势+僵直</td><td class="rule-lose">被刺穿：受轻击伤+1架势</td><td class="rule-lose">浪费：自身+1架势</td><td class="rule-win">识破！对手+2架势</td></tr>
+      <tr><td><strong>⚡重击</strong></td><td class="rule-lose">被反制！受2伤+2架势+僵直</td><td>互砍各受伤</td><td class="rule-win">命中！对手受3伤+1架势</td><td class="rule-win">破防！减1伤后命中</td><td class="rule-win">命中！对手受3伤+1架势</td></tr>
+      <tr><td><strong>🎯轻击</strong></td><td class="rule-win">穿透！对手受1伤+1架势</td><td class="rule-lose">被克：受3伤+1架势</td><td>互刺各受伤</td><td class="rule-lose">被挡：完全抵消</td><td class="rule-win">命中！对手受1伤+1架势</td></tr>
       <tr><td><strong>🛡️格挡</strong></td><td>空过(对手+1架势)</td><td class="rule-lose">被破：受减伤后伤害+1架势</td><td class="rule-win">格挡：完全抵消</td><td>空过</td><td class="rule-lose">被骗：自身+3架势</td></tr>
-      <tr><td><strong>🌀虚晃</strong></td><td class="rule-lose">被识破：自身+2架势</td><td class="rule-lose">被砍：受3伤+1架势</td><td class="rule-lose">被刺：受1伤+1架势</td><td class="rule-win">骗到：对手+3架势</td><td>空过</td></tr>
+      <tr><td><strong>🌀擒拿</strong></td><td class="rule-lose">被识破：自身+2架势</td><td class="rule-lose">被砍：受3伤+1架势</td><td class="rule-lose">被刺：受1伤+1架势</td><td class="rule-win">骗到：对手+3架势</td><td>空过</td></tr>
     </table>
   `;
 }
@@ -162,12 +162,12 @@ function buildWeaponTable() {
   return `
     <table class="rules-matrix">
       <tr><th>兵器</th><th>优势区</th><th>劣势区</th><th>核心特点</th></tr>
-      <tr><td>🗡️ 短刀</td><td>0, 1</td><td>2, 3</td><td>优势区点刺破闪避、闪避反击1伤、远距劈砍几乎无伤</td></tr>
-      <tr><td>🔱 长枪</td><td>2, 3</td><td>0</td><td>劈砍+2伤、劈砍额外+1架势、格挡弹枪推1距、贴身劈砍几乎无伤</td></tr>
-      <tr><td>⚔️ 剑</td><td>1, 2</td><td>0, 3</td><td>卸力不僵直/自身-2架势、完美格挡(劈砍免伤)、贴身远距劈砍削弱</td></tr>
-      <tr><td>🏏 棍</td><td>1, 2, 3</td><td>0</td><td>虚晃+3架势+推距、劈砍额外+2架势、格挡震退+1架势、贴身劈砍几乎无伤</td></tr>
-      <tr><td>🪓 大刀</td><td>2</td><td>0</td><td>劈砍+3伤(全场最高)+推1距、格挡额外减伤、贴身劈砍几乎无伤</td></tr>
-      <tr><td>🥢 双刺</td><td>0</td><td>2, 3</td><td>贴身点刺追击+1伤、闪避+2架势、贴身命中+1架势</td></tr>
+      <tr><td>🗡️ 短刀</td><td>0, 1</td><td>2, 3</td><td>优势区轻击破闪避、闪避反击1伤、远距重击几乎无伤</td></tr>
+      <tr><td>🔱 长枪</td><td>2, 3</td><td>0</td><td>重击+2伤、重击额外+1架势、格挡弹枪推1距、贴身重击几乎无伤</td></tr>
+      <tr><td>⚔️ 剑</td><td>1, 2</td><td>0, 3</td><td>卸力不僵直/自身-2架势、完美格挡(重击免伤)、贴身远距重击削弱</td></tr>
+      <tr><td>🏏 棍</td><td>1, 2, 3</td><td>0</td><td>擒拿+3架势+推距、重击额外+2架势、格挡震退+1架势、贴身重击几乎无伤</td></tr>
+      <tr><td>🪓 大刀</td><td>2</td><td>0</td><td>重击+3伤(全场最高)+推1距、格挡额外减伤、贴身重击几乎无伤</td></tr>
+      <tr><td>🥢 双刺</td><td>0</td><td>2, 3</td><td>贴身轻击追击+1伤、闪避+2架势、贴身命中+1架势</td></tr>
     </table>
   `;
 }

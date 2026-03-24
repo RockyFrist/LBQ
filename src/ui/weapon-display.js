@@ -1,11 +1,11 @@
-import { CombatCard, DistanceCard, WeaponType } from '../types.js';
+﻿import { CombatCard, DistanceCard, WeaponType } from '../types.js';
 import { WEAPON_NAMES, WEAPON_EMOJI, WEAPON_ZONES, DISTANCE_NAMES } from '../constants.js';
 
 // ═══════ Shared Display Constants ═══════
 // Used by animation.js, renderer.js, setup-screen.js
 
 export const COMBAT_CARD_INFO = {
-  [CombatCard.DEFLECT]: { emoji: '🤺', type: '防', desc: '反制劈砍+识破虚晃，克劈砍/虚晃' },
+  [CombatCard.DEFLECT]: { emoji: '🤺', type: '防', desc: '反制重击+识破擒拿，克重击/擒拿' },
   [CombatCard.SLASH]:   { emoji: '⚡', type: '攻', desc: '3伤+1架势，高威力' },
   [CombatCard.THRUST]:  { emoji: '🎯', type: '攻', desc: '1伤+1架势，快速打击' },
   [CombatCard.BLOCK]:   { emoji: '🛡️', type: '防', desc: '减免攻击伤害' },
@@ -16,7 +16,7 @@ export const DISTANCE_CARD_INFO = {
   [DistanceCard.ADVANCE]: { emoji: '⬆️', desc: '冲步：间距-1' },
   [DistanceCard.RETREAT]: { emoji: '⬇️', desc: '撤步：间距+1' },
   [DistanceCard.HOLD]:    { emoji: '⏸️', desc: '不变' },
-  [DistanceCard.DODGE]:   { emoji: '💨', desc: '闪避(耗2体力，短刀/双刺耗1)：闪开劈砍/点刺，无法躲虚晃' },
+  [DistanceCard.DODGE]:   { emoji: '💨', desc: '闪避(耗2体力，短刀/双刺耗1)：闪开重击/轻击，无法躲擒拿' },
 };
 
 export const FIGHTER_POSITIONS = {
@@ -37,42 +37,42 @@ export const WEAPON_TRAITS = {
     traits: [
       T('core', '优势区闪避反击1伤'),
       T('core', '闪避仅耗1体力'),
-      T('buff', '优势区虚晃+4架势'),
-      T('weak', '远距(3)劈砍无伤'),
+      T('buff', '优势区擒拿+4架势'),
+      T('weak', '远距(3)重击无伤'),
     ],
   },
   [WeaponType.SPEAR]: {
     style: '中远控距',
     traits: [
       T('core', '优势区格挡弹枪→推距+1'),
-      T('buff', '优势区劈砍5伤，额外+1架势'),
-      T('weak', '贴身(0)劈砍无伤'),
+      T('buff', '优势区重击5伤，额外+1架势'),
+      T('weak', '贴身(0)重击无伤'),
     ],
   },
   [WeaponType.SWORD]: {
     style: '均衡防反',
     traits: [
       T('core', '卸力不僵直，自身回2架势'),
-      T('core', '优势区格挡完全免劈砍'),
-      T('weak', '贴身劈砍仅1伤，远距劈砍无伤'),
+      T('core', '优势区格挡完全免重击'),
+      T('weak', '贴身重击仅1伤，远距重击无伤'),
     ],
   },
   [WeaponType.STAFF]: {
     style: '广域压制',
     traits: [
-      T('core', '优势区虚晃命中格挡→推距+1'),
+      T('core', '优势区擒拿命中格挡→推距+1'),
       T('core', '优势区格挡给对手+1架势'),
-      T('buff', '优势区虚晃+4架势 / 劈砍+2架势'),
-      T('weak', '贴身(0)劈砍无伤'),
+      T('buff', '优势区擒拿+4架势 / 重击+2架势'),
+      T('weak', '贴身(0)重击无伤'),
     ],
   },
   [WeaponType.GREAT_BLADE]: {
     style: '重击爆发',
     traits: [
-      T('core', '优势区劈砍命中→推距+1'),
+      T('core', '优势区重击命中→推距+1'),
       T('core', '优势区格挡减2伤(常规1)'),
-      T('buff', '优势区劈砍6伤(全场最高)'),
-      T('weak', '贴身(0)劈砍无伤'),
+      T('buff', '优势区重击6伤(全场最高)'),
+      T('weak', '贴身(0)重击无伤'),
     ],
   },
   [WeaponType.DUAL_STAB]: {
@@ -80,8 +80,8 @@ export const WEAPON_TRAITS = {
     traits: [
       T('core', '闪避成功→对手+2架势'),
       T('core', '闪避仅耗1体力'),
-      T('buff', '贴身：点刺3伤(追击) / 虚晃+4架势'),
-      T('weak', '中远距(2-3)劈砍无伤'),
+      T('buff', '贴身：轻击3伤(追击) / 擒拿+4架势'),
+      T('weak', '中远距(2-3)重击无伤'),
     ],
   },
 };
@@ -100,7 +100,7 @@ const WEAPON_SKILLS = {
   [WeaponType.SPEAR]:       [{ name: '撑杆退', emoji: '🔱', desc: '间距+1，阻止对手下回合靠近超过1格' }],
   [WeaponType.SWORD]:       [{ name: '游身换位', emoji: '🌊', desc: '间距不变，获得下回合优先结算权' }],
   [WeaponType.STAFF]:       [{ name: '拨草寻蛇', emoji: '🐍', desc: '间距+1，并给对手+1架势' }],
-  [WeaponType.GREAT_BLADE]: [{ name: '沉肩带步', emoji: '🏋️', desc: '间距-1，下回合劈砍消耗-1' }],
+  [WeaponType.GREAT_BLADE]: [{ name: '沉肩带步', emoji: '🏋️', desc: '间距-1，下回合重击消耗-1' }],
   [WeaponType.DUAL_STAB]:   [{ name: '蛇行缠步', emoji: '🥢', desc: '间距-2，消耗2体力' }],
 };
 

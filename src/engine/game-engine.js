@@ -82,12 +82,12 @@ function stepCombatResolve(s, pCombat, aCombat) {
   // 同时判定双方闪避结果（基于原始攻防卡）
   if (pDodging) {
     if (aCombat === 'feint') {
-      // 虚晃穿透闪避：虚晃不被闪避规避，闪避落空
-      s.log.push('🎭 AI虚晃穿透闪避！玩家闪避落空');
+      // 擒拿穿透闪避：擒拿不被闪避规避，闪避落空
+      s.log.push('🎭 AI擒拿穿透闪避！玩家闪避落空');
     } else if (aCombat && CARD_TYPE_MAP[aCombat] === CardType.ATTACK) {
       if (aCombat === 'thrust' && canThrustBreakDodge(s.ai.weapon, s.distance)) {
         pCascade = true;
-        s.log.push('⚡ 玩家闪避被AI点刺打断(优势区)！攻防卡取消');
+        s.log.push('⚡ 玩家闪避被AI轻击打断(优势区)！攻防卡取消');
       } else {
         pDodgeSuccess = true;
         s.log.push('💨 玩家闪避成功！AI攻击无效');
@@ -111,12 +111,12 @@ function stepCombatResolve(s, pCombat, aCombat) {
 
   if (aDodging) {
     if (pCombat === 'feint') {
-      // 虚晃穿透闪避：虚晃不被闪避规避，闪避落空
-      s.log.push('🎭 玩家虚晃穿透闪避！AI闪避落空');
+      // 擒拿穿透闪避：擒拿不被闪避规避，闪避落空
+      s.log.push('🎭 玩家擒拿穿透闪避！AI闪避落空');
     } else if (pCombat && CARD_TYPE_MAP[pCombat] === CardType.ATTACK) {
       if (pCombat === 'thrust' && canThrustBreakDodge(s.player.weapon, s.distance)) {
         aCascade = true;
-        s.log.push('⚡ AI闪避被玩家点刺打断(优势区)！攻防卡取消');
+        s.log.push('⚡ AI闪避被玩家轻击打断(优势区)！攻防卡取消');
       } else {
         aDodgeSuccess = true;
         s.log.push('💨 AI闪避成功！玩家攻击无效');
@@ -179,15 +179,15 @@ function stepCombatResolve(s, pCombat, aCombat) {
     }
   }
 
-  // 双刺追击：贴身点刺命中（造成伤害）时追加1点伤害
+  // 双刺追击：贴身轻击命中（造成伤害）时追加1点伤害
   if (s.distance === 0) {
     if (s.player.weapon === 'dual_stab' && effectiveP === 'thrust' && effects.ai.hpChange < 0) {
       s.ai.hp -= 1;
-      s.log.push('🥢 双刺追击：贴身点刺二连，AI额外受1伤');
+      s.log.push('🥢 双刺追击：贴身轻击二连，AI额外受1伤');
     }
     if (s.ai.weapon === 'dual_stab' && effectiveA === 'thrust' && effects.player.hpChange < 0) {
       s.player.hp -= 1;
-      s.log.push('🥢 双刺追击：贴身点刺二连，玩家额外受1伤');
+      s.log.push('🥢 双刺追击：贴身轻击二连，玩家额外受1伤');
     }
   }
 

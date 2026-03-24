@@ -1,4 +1,4 @@
-import { WeaponType, CombatCard } from '../types.js';
+﻿import { WeaponType, CombatCard } from '../types.js';
 import { WEAPON_ZONES } from '../constants.js';
 
 // ═══════ WEAPON_PROFILES — 单一数据来源 ═══════
@@ -7,14 +7,14 @@ import { WEAPON_ZONES } from '../constants.js';
 const DEFAULTS = {
   deflectStagger: true,     // 卸力成功是否造成僵直
   deflectSelfStance: 0,     // 卸力成功后自身架势变化
-  blockSlashReduction: 1,   // 格挡对劈砍的基础减伤
-  advBlockSlashReduction: 0,// 优势区格挡对劈砍的额外减伤
+  blockSlashReduction: 1,   // 格挡对重击的基础减伤
+  advBlockSlashReduction: 0,// 优势区格挡对重击的额外减伤
   advDodgeCounter: 0,       // 优势区闪避反击伤害
-  advBlockPerfect: false,   // 优势区完美格挡(劈砍免伤)
+  advBlockPerfect: false,   // 优势区完美格挡(重击免伤)
   advBlockBonusStance: 0,   // 优势区格挡给对手额外架势
-  advSlashBonusStance: 0,   // 优势区劈砍命中额外架势
+  advSlashBonusStance: 0,   // 优势区重击命中额外架势
   advBlockPushDist: 0,      // 优势区格挡推距
-  advFeintBonusStance: 0,   // 优势区虚晃额外架势
+  advFeintBonusStance: 0,   // 优势区擒拿额外架势
   dodgeCostReduction: 0,     // 闪避体力消耗减免
   damageRules: [],          // 伤害修正规则 [{adv, disadv, dist, minDist, card, mod}]
   pushRules: [],            // 推距规则 [{card, vs, adv, push}]

@@ -41,10 +41,10 @@ export const DISTANCE_CARD_BASE = {
 
 export const COMBAT_CARD_NAMES = {
   [CombatCard.DEFLECT]: '卸力',
-  [CombatCard.SLASH]: '劈砍',
-  [CombatCard.THRUST]: '点刺',
+  [CombatCard.SLASH]: '重击',
+  [CombatCard.THRUST]: '轻击',
   [CombatCard.BLOCK]: '格挡',
-  [CombatCard.FEINT]: '虚晃',
+  [CombatCard.FEINT]: '擒拿',
 };
 
 export const DISTANCE_CARD_NAMES = {

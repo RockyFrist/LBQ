@@ -55,7 +55,7 @@ function resolveMirror(fx, card, pW, aW, dist) {
       // 劣势区攻击架势减半
       fx.player.stanceChange += calcAttackStance(1, aW, dist);
       fx.ai.stanceChange += calcAttackStance(1, pW, dist);
-      // 棍优势区劈砍额外+2架势
+      // 棍优势区重击额外+2架势
       const pSlashBonus = slashBonusStance(pW, dist);
       const aSlashBonus = slashBonusStance(aW, dist);
       if (pSlashBonus > 0) fx.ai.stanceChange += pSlashBonus;
@@ -81,7 +81,7 @@ function resolveMirror(fx, card, pW, aW, dist) {
     }
 
     case CombatCard.FEINT:
-      fx.log.push('双方虚晃，空过');
+      fx.log.push('双方擒拿，空过');
       break;
   }
   return fx;
@@ -102,26 +102,26 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     const dmg = calcDamage(CombatCard.THRUST, aW, dist);
     fx.player.hpChange -= dmg;
     fx.player.stanceChange += calcAttackStance(1, aW, dist);
-    fx.log.push(`玩家卸力失败遇点刺：受${dmg}伤+${calcAttackStance(1, aW, dist)}架势`);
+    fx.log.push(`玩家卸力失败遇轻击：受${dmg}伤+${calcAttackStance(1, aW, dist)}架势`);
     return;
   }
   if (aCard === CombatCard.DEFLECT && pCard === CombatCard.THRUST) {
     const dmg = calcDamage(CombatCard.THRUST, pW, dist);
     fx.ai.hpChange -= dmg;
     fx.ai.stanceChange += calcAttackStance(1, pW, dist);
-    fx.log.push(`AI卸力失败遇点刺：受${dmg}伤+${calcAttackStance(1, pW, dist)}架势`);
+    fx.log.push(`AI卸力失败遇轻击：受${dmg}伤+${calcAttackStance(1, pW, dist)}架势`);
     return;
   }
 
   if (pCard === CombatCard.DEFLECT && aCard === CombatCard.FEINT) {
-    // 卸力识破虚晃：虚晃方受到架势惩罚
+    // 卸力识破擒拿：擒拿方受到架势惩罚
     fx.ai.stanceChange += 2;
-    fx.log.push('玩家卸力识破虚晃：AI+2架势');
+    fx.log.push('玩家卸力识破擒拿：AI+2架势');
     return;
   }
   if (aCard === CombatCard.DEFLECT && pCard === CombatCard.FEINT) {
     fx.player.stanceChange += 2;
-    fx.log.push('AI卸力识破虚晃：玩家+2架势');
+    fx.log.push('AI卸力识破擒拿：玩家+2架势');
     return;
   }
 
@@ -136,7 +136,7 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     return;
   }
 
-  // ━━━ 劈砍 vs 点刺 ━━━
+  // ━━━ 重击 vs 轻击 ━━━
   if (pCard === CombatCard.SLASH && aCard === CombatCard.THRUST) {
     applySlashHit(fx, 'player', 'ai', pW, aW, dist, CombatCard.THRUST);
     return;
@@ -146,11 +146,11 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     return;
   }
 
-  // ━━━ 劈砍 vs 格挡 ━━━
+  // ━━━ 重击 vs 格挡 ━━━
   if (pCard === CombatCard.SLASH && aCard === CombatCard.BLOCK) {
     const dmg = calcDamage(CombatCard.SLASH, pW, dist);
     const reduction = getBlockSlashReduction(aW, dist);
-    // 剑优势区完美格挡：劈砍完全免伤
+    // 剑优势区完美格挡：重击完全免伤
     const finalDmg = isBlockPerfect(aW, dist) ? 0 : Math.max(0, dmg - reduction);
     fx.ai.hpChange -= finalDmg;
     fx.ai.stanceChange += calcAttackStance(1, pW, dist);
@@ -158,7 +158,7 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     const bStance = blockBonusStance(aW, dist);
     if (bStance > 0) fx.player.stanceChange += bStance;
     if (pW === 'spear' && isAdvantage(pW, dist)) fx.ai.stanceChange += 1;
-    // 棍劈砍优势区额外架势
+    // 棍重击优势区额外架势
     const sBonus = slashBonusStance(pW, dist);
     if (sBonus > 0) fx.ai.stanceChange += sBonus;
     const push = getPushDistance(pW, dist, CombatCard.SLASH, CombatCard.BLOCK);
@@ -166,9 +166,9 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     const bPush = blockPushDistance(aW, dist);
     fx.distancePush += push + bPush;
     if (isBlockPerfect(aW, dist)) {
-      fx.log.push(`玩家劈砍被完美格挡(剑)：AI完全免伤`);
+      fx.log.push(`玩家重击被完美格挡(剑)：AI完全免伤`);
     } else {
-      fx.log.push(`玩家劈砍破格挡：AI受${finalDmg}伤(减免${reduction})+架势`);
+      fx.log.push(`玩家重击破格挡：AI受${finalDmg}伤(减免${reduction})+架势`);
     }
     return;
   }
@@ -187,14 +187,14 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     const bPush = blockPushDistance(pW, dist);
     fx.distancePush += push + bPush;
     if (isBlockPerfect(pW, dist)) {
-      fx.log.push(`AI劈砍被完美格挡(剑)：玩家完全免伤`);
+      fx.log.push(`AI重击被完美格挡(剑)：玩家完全免伤`);
     } else {
-      fx.log.push(`AI劈砍破格挡：玩家受${finalDmg}伤(减免${reduction})+架势`);
+      fx.log.push(`AI重击破格挡：玩家受${finalDmg}伤(减免${reduction})+架势`);
     }
     return;
   }
 
-  // ━━━ 劈砍 vs 虚晃 ━━━
+  // ━━━ 重击 vs 擒拿 ━━━
   if (pCard === CombatCard.SLASH && aCard === CombatCard.FEINT) {
     applySlashHit(fx, 'player', 'ai', pW, aW, dist, CombatCard.FEINT);
     return;
@@ -204,13 +204,13 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     return;
   }
 
-  // ━━━ 点刺 vs 格挡 ━━━
+  // ━━━ 轻击 vs 格挡 ━━━
   if (pCard === CombatCard.THRUST && aCard === CombatCard.BLOCK) {
     const bStance = blockBonusStance(aW, dist);
     if (bStance > 0) fx.player.stanceChange += bStance;
     const bPush = blockPushDistance(aW, dist);
     if (bPush > 0) fx.distancePush += bPush;
-    fx.log.push(`玩家点刺被格挡完全抵消${bStance > 0 ? '，棍震退+1架势' : ''}${bPush > 0 ? '，被弹枪推开' : ''}`);
+    fx.log.push(`玩家轻击被格挡完全抵消${bStance > 0 ? '，棍震退+1架势' : ''}${bPush > 0 ? '，被弹枪推开' : ''}`);
     return;
   }
   if (aCard === CombatCard.THRUST && pCard === CombatCard.BLOCK) {
@@ -218,34 +218,34 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     if (bStance > 0) fx.ai.stanceChange += bStance;
     const bPush = blockPushDistance(pW, dist);
     if (bPush > 0) fx.distancePush += bPush;
-    fx.log.push(`AI点刺被格挡完全抵消${bStance > 0 ? '，棍震退+1架势' : ''}${bPush > 0 ? '，被弹枪推开' : ''}`);
+    fx.log.push(`AI轻击被格挡完全抵消${bStance > 0 ? '，棍震退+1架势' : ''}${bPush > 0 ? '，被弹枪推开' : ''}`);
     return;
   }
 
-  // ━━━ 点刺 vs 虚晃 ━━━
+  // ━━━ 轻击 vs 擒拿 ━━━
   if (pCard === CombatCard.THRUST && aCard === CombatCard.FEINT) {
     const dmg = calcDamage(CombatCard.THRUST, pW, dist);
     fx.ai.hpChange -= dmg;
     fx.ai.stanceChange += calcAttackStance(1, pW, dist);
-    fx.log.push(`玩家点刺命中：AI受${dmg}伤+${calcAttackStance(1, pW, dist)}架势`);
+    fx.log.push(`玩家轻击命中：AI受${dmg}伤+${calcAttackStance(1, pW, dist)}架势`);
     return;
   }
   if (aCard === CombatCard.THRUST && pCard === CombatCard.FEINT) {
     const dmg = calcDamage(CombatCard.THRUST, aW, dist);
     fx.player.hpChange -= dmg;
     fx.player.stanceChange += calcAttackStance(1, aW, dist);
-    fx.log.push(`AI点刺命中：玩家受${dmg}伤+${calcAttackStance(1, aW, dist)}架势`);
+    fx.log.push(`AI轻击命中：玩家受${dmg}伤+${calcAttackStance(1, aW, dist)}架势`);
     return;
   }
 
-  // ━━━ 格挡 vs 虚晃 ━━━
+  // ━━━ 格挡 vs 擒拿 ━━━
   if (pCard === CombatCard.BLOCK && aCard === CombatCard.FEINT) {
     const stVal = getFeintStanceValue(aW, dist);
     const st = calcAttackStance(stVal, aW, dist);
     fx.player.stanceChange += st;
     const push = getPushDistance(aW, dist, CombatCard.FEINT, CombatCard.BLOCK);
     fx.distancePush += push;
-    fx.log.push(`AI虚晃命中格挡：玩家+${st}架势${push ? '，距离+' + push : ''}`);
+    fx.log.push(`AI擒拿命中格挡：玩家+${st}架势${push ? '，距离+' + push : ''}`);
     return;
   }
   if (aCard === CombatCard.BLOCK && pCard === CombatCard.FEINT) {
@@ -254,7 +254,7 @@ function resolvePair(fx, pCard, aCard, pW, aW, dist) {
     fx.ai.stanceChange += st;
     const push = getPushDistance(pW, dist, CombatCard.FEINT, CombatCard.BLOCK);
     fx.distancePush += push;
-    fx.log.push(`玩家虚晃命中格挡：AI+${st}架势${push ? '，距离+' + push : ''}`);
+    fx.log.push(`玩家擒拿命中格挡：AI+${st}架势${push ? '，距离+' + push : ''}`);
     return;
   }
 
@@ -281,7 +281,7 @@ function applySlashHit(fx, slasher, victim, slasherWeapon, victimWeapon, dist, v
   fx[victim].hpChange -= dmg;
   fx[victim].stanceChange += calcAttackStance(1, slasherWeapon, dist);
   
-  // 棍优势区劈砍额外+2架势(弱伤高控)
+  // 棍优势区重击额外+2架势(弱伤高控)
   const sBonus = slashBonusStance(slasherWeapon, dist);
   if (sBonus > 0) fx[victim].stanceChange += sBonus;
 
@@ -292,7 +292,7 @@ function applySlashHit(fx, slasher, victim, slasherWeapon, victimWeapon, dist, v
   const push = getPushDistance(slasherWeapon, dist, CombatCard.SLASH, victimCard);
   fx.distancePush += push;
 
-fx.log.push(`${slasher === 'player' ? '玩家' : 'AI'}劈砍命中：对手受${dmg}伤+架势${push ? '，距离+' + push : ''}`);
+fx.log.push(`${slasher === 'player' ? '玩家' : 'AI'}重击命中：对手受${dmg}伤+架势${push ? '，距离+' + push : ''}`);
 }
 
 /**
@@ -318,21 +318,21 @@ export function resolveOneSided(state, activeSide, card) {
       if (weapon === 'spear' && isAdvantage(weapon, dist)) fx[victim].stanceChange += 1;
       const push = getPushDistance(weapon, dist, CombatCard.SLASH, null);
       fx.distancePush += push;
-      fx.log.push(`${lbl}劈砍命中(对手闪避失败)：对手受${dmg}伤+架势`);
+      fx.log.push(`${lbl}重击命中(对手闪避失败)：对手受${dmg}伤+架势`);
       break;
     }
     case CombatCard.THRUST: {
       const dmg = calcDamage(CombatCard.THRUST, weapon, dist);
       fx[victim].hpChange -= dmg;
       fx[victim].stanceChange += calcAttackStance(1, weapon, dist);
-      fx.log.push(`${lbl}点刺命中(对手闪避失败)：对手受${dmg}伤`);
+      fx.log.push(`${lbl}轻击命中(对手闪避失败)：对手受${dmg}伤`);
       break;
     }
     case CombatCard.FEINT: {
       const stVal = getFeintStanceValue(weapon, dist);
       const st = calcAttackStance(stVal, weapon, dist);
       fx[victim].stanceChange += st;
-      fx.log.push(`${lbl}虚晃命中(对手闪避失败)：对手+${st}架势`);
+      fx.log.push(`${lbl}擒拿命中(对手闪避失败)：对手+${st}架势`);
       break;
     }
     // 防守卡单独生效 = 无事发生

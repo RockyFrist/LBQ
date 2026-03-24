@@ -259,7 +259,7 @@ function buildSituationHint(state) {
   if (p.stance >= 4) {
     hints.push('🔴 你架势快满了！被攻击可能触发处决(-5血)');
   } else if (ai.stance >= 4) {
-    hints.push('🟢 对手架势快满了！攻击/虚晃可触发处决');
+    hints.push('🟢 对手架势快满了！攻击/擒拿可触发处决');
   }
 
   if (p.stamina <= 1) {
