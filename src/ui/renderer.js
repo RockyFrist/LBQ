@@ -2,7 +2,7 @@
 import { COMBAT_CARD_NAMES, DISTANCE_CARD_NAMES, WEAPON_NAMES, DISTANCE_NAMES,
   gameConfig, WEAPON_ZONES, COMBAT_CARD_BASE, CARD_TYPE_MAP, WEAPON_EMOJI, DISTANCE_CARD_BASE } from '../constants.js';
 import { getAvailableCombatCards, getAvailableDistanceCards } from '../engine/card-validator.js';
-import { getDamageModifier, getDodgeCostReduction } from '../engine/weapon.js';
+import { getDamageModifier, getDodgeCostReduction, canThrustBreakDodge } from '../engine/weapon.js';
 import { getActiveTraits, explainCombatMatchup } from '../engine/combat-explain.js';
 import { buildGuideContent, buildRulesContent } from './tutorial-content.js';
 import { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS,
@@ -609,6 +609,30 @@ function buildRoundDetailModal() {
   `;
 }
 
+function explainOneSidedCard(side, card, ownWeapon, oppWeapon, dist, cardNames, weaponNames) {
+  const lbl = side === 'player' ? '玩家' : 'AI';
+  const name = cardNames[card];
+  if (card === CombatCard.BLOCK || card === CombatCard.DEFLECT) {
+    return `${lbl}出 <strong>${name}</strong>：<span style="color:#aaa">防守落空（无攻击可接）</span>`;
+  }
+  if (card === CombatCard.SLASH) {
+    const base = COMBAT_CARD_BASE[CombatCard.SLASH].damage;
+    const mod = getDamageModifier(ownWeapon, dist, CombatCard.SLASH);
+    const dmg = Math.max(0, base + mod);
+    return `${lbl}出 <strong>${name}</strong> 命中（对手无防守）：对手受 <strong>${dmg} 伤 +1 架势</strong>`;
+  }
+  if (card === CombatCard.THRUST) {
+    const base = COMBAT_CARD_BASE[CombatCard.THRUST].damage;
+    const mod = getDamageModifier(ownWeapon, dist, CombatCard.THRUST);
+    const dmg = Math.max(0, base + mod);
+    return `${lbl}出 <strong>${name}</strong> 命中（对手无防守）：对手受 <strong>${dmg} 伤 +1 架势</strong>`;
+  }
+  if (card === CombatCard.FEINT) {
+    return `${lbl}出 <strong>${name}</strong>（对手无防守）：对手 <strong>+2 架势</strong>`;
+  }
+  return `${lbl}出 <strong>${name}</strong>`;
+}
+
 function showRoundExplanation(state, roundIdx) {
   const h = state.history[roundIdx];
   if (!h) return;
@@ -676,11 +700,67 @@ function showRoundExplanation(state, roundIdx) {
   if (aAdvBefore) lines.push(`<li>⚠️ AI ${WEAPON_NAMES[aW]} 在优势区</li>`);
   lines.push(`</ul>`);
 
-  // Step 2: Combat
+  // Step 2: Combat — account for dodge interactions
   lines.push(`<h4>② 攻防结算</h4>`);
   lines.push(`<ul>`);
-  const combatExplanation = explainCombatMatchup(h.playerCombat, h.aiCombat, pW, aW, distAfterMove);
-  combatExplanation.forEach(l => lines.push(`<li>${l}</li>`));
+
+  // ── Derive effective cards after dodge resolution ──
+  const pDodging = h.playerDistance === DistanceCard.DODGE;
+  const aDodging = h.aiDistance === DistanceCard.DODGE;
+  let effectivePCard = h.playerCombat;
+  let effectiveACard = h.aiCombat;
+  const isAttack = c => CARD_TYPE_MAP[c] === CardType.ATTACK;
+
+  // Player dodging
+  if (pDodging) {
+    if (h.aiCombat === CombatCard.FEINT) {
+      lines.push(`<li>🎭 <strong>AI擒拿穿透闪避！</strong>玩家闪避落空，攻防正常结算</li>`);
+    } else if (isAttack(h.aiCombat)) {
+      if (h.aiCombat === CombatCard.THRUST && canThrustBreakDodge(aW, distAfterMove)) {
+        lines.push(`<li>⚡ <strong>玩家闪避被AI轻击打断</strong>（优势区穿透）！双方攻防卡均取消</li>`);
+        effectivePCard = null;
+        effectiveACard = null;
+      } else {
+        lines.push(`<li>💨 <strong>玩家闪避成功！</strong>AI的${COMBAT_CARD_NAMES[h.aiCombat]}被完全破解</li>`);
+        effectiveACard = null;
+      }
+    } else {
+      lines.push(`<li>💨 玩家闪避落空（AI未出攻击牌），攻防正常结算</li>`);
+    }
+  }
+
+  // AI dodging
+  if (aDodging) {
+    if (h.playerCombat === CombatCard.FEINT) {
+      lines.push(`<li>🎭 <strong>玩家擒拿穿透闪避！</strong>AI闪避落空，攻防正常结算</li>`);
+    } else if (isAttack(h.playerCombat)) {
+      if (h.playerCombat === CombatCard.THRUST && canThrustBreakDodge(pW, distAfterMove)) {
+        lines.push(`<li>⚡ <strong>AI闪避被玩家轻击打断</strong>（优势区穿透）！双方攻防卡均取消</li>`);
+        effectivePCard = null;
+        effectiveACard = null;
+      } else {
+        lines.push(`<li>💨 <strong>AI闪避成功！</strong>玩家的${COMBAT_CARD_NAMES[h.playerCombat]}被完全破解</li>`);
+        effectivePCard = null;
+      }
+    } else {
+      lines.push(`<li>💨 AI闪避落空（玩家未出攻击牌），攻防正常结算</li>`);
+    }
+  }
+
+  // ── Show effective card resolution ──
+  if (effectivePCard && effectiveACard) {
+    const combatExplanation = explainCombatMatchup(effectivePCard, effectiveACard, pW, aW, distAfterMove);
+    combatExplanation.forEach(l => lines.push(`<li>${l}</li>`));
+  } else if (effectivePCard && !effectiveACard) {
+    // Player's card fires one-sided (AI card cancelled by dodge)
+    lines.push(`<li>${explainOneSidedCard('player', effectivePCard, pW, aW, distAfterMove, COMBAT_CARD_NAMES, WEAPON_NAMES)}</li>`);
+  } else if (!effectivePCard && effectiveACard) {
+    // AI's card fires one-sided (player card cancelled by dodge)
+    lines.push(`<li>${explainOneSidedCard('ai', effectiveACard, aW, pW, distAfterMove, COMBAT_CARD_NAMES, WEAPON_NAMES)}</li>`);
+  } else {
+    lines.push(`<li><span style="color:#aaa">双方攻防均被取消</span></li>`);
+  }
+
   lines.push(`</ul>`);
 
   // Step 3: Interrupt
