@@ -252,9 +252,13 @@ function aiLevel3(state) {
   const playerStance = state.player.stance;
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
-  // 自身高架势→格挡自保
-  if (aiStance >= 3 && combatCards.includes(CombatCard.BLOCK) && Math.random() < 0.7) {
-    combatCard = CombatCard.BLOCK;
+  // 自身高架势→防御自保（混合格挡/卸力，避免被擒拿反复刷）
+  if (aiStance >= 4) {
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    if (safe.length && Math.random() < 0.7) combatCard = pick(safe);
+  } else if (aiStance >= 3 && Math.random() < 0.5) {
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    if (safe.length) combatCard = pick(safe);
   }
 
   // 对手僵直→重击
@@ -314,9 +318,13 @@ function aiLevel4(state) {
   const playerStance = state.player.stance;
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
-  // 高架势→格挡
-  if (aiStance >= 3 && combatCards.includes(CombatCard.BLOCK)) {
-    combatCard = CombatCard.BLOCK;
+  // 高架势→防御自保（混合选择避免可预测）
+  if (aiStance >= 4) {
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    if (safe.length && Math.random() < 0.75) combatCard = pick(safe);
+  } else if (aiStance >= 3) {
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    if (safe.length && Math.random() < 0.55) combatCard = pick(safe);
   }
 
   // 僵直惩罚→重击
@@ -404,13 +412,19 @@ function aiLevel5(state) {
   const playerStance = state.player.stance;
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
-  // 高架势→格挡自保
-  if (aiStance >= 4 && combatCards.includes(CombatCard.BLOCK)) {
-    combatCard = CombatCard.BLOCK;
-  }
-  if (!combatCard && aiStance >= 3) {
+  // 高架势→防御自保（高级AI预判玩家会出擒拿破格挡，混入攻击反制）
+  if (aiStance >= 4) {
+    // 预判玩家看到高架势会出擒拿→用重击/轻击惩罚
+    const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
-    if (safe.length && Math.random() < 0.75) combatCard = pick(safe);
+    if (Math.random() < 0.35 && antiFeint.length) {
+      combatCard = pick(antiFeint);
+    } else if (safe.length) {
+      combatCard = pick(safe);
+    }
+  } else if (aiStance >= 3) {
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    if (safe.length && Math.random() < 0.6) combatCard = pick(safe);
   }
 
   // 僵直惩罚
@@ -420,7 +434,6 @@ function aiLevel5(state) {
 
   // 对手高架势→精准施压
   if (!combatCard && playerStance >= 3) {
-    // 选能加最多架势的牌
     const pressure = [CombatCard.FEINT, CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     if (pressure.length) combatCard = pressure[0];
   }
@@ -512,14 +525,22 @@ function aiLevel6(state) {
   const aiStance = state.ai.stance;
   const playerStance = state.player.stance;
 
-  // 高架势→防御
-  if (aiStance >= 3) {
-    if (aiStance >= 4 && combatCards.includes(CombatCard.BLOCK)) {
-      combatCard = CombatCard.BLOCK;
-    } else {
-      const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
-      if (safe.length) combatCard = pick(safe);
+  // 高架势→防御（高手AI预判玩家反套路，不固定格挡）
+  if (aiStance >= 4) {
+    // 高手知道玩家会用擒拿打格挡，所以混入攻击反制
+    const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    // 如果最近玩家频繁用擒拿，加大攻击概率
+    const recentFeints = history.slice(-3).filter(h => h.playerCombat === CombatCard.FEINT).length;
+    const attackChance = recentFeints >= 1 ? 0.45 : 0.3;
+    if (Math.random() < attackChance && antiFeint.length) {
+      combatCard = pick(antiFeint);
+    } else if (safe.length) {
+      combatCard = pick(safe);
     }
+  } else if (aiStance >= 3) {
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    if (safe.length && Math.random() < 0.55) combatCard = pick(safe);
   }
 
   // 僵直惩罚
@@ -621,10 +642,20 @@ function aiLevel7(state) {
     aiRepeat = last2ai[0] === last2ai[1];
   }
 
-  // 高架势→防御
-  if (aiStance >= 3) {
+  // 高架势→防御（宗师AI反读心：玩家看到高架势会出擒拿，AI反制）
+  if (aiStance >= 4) {
+    const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
-    if (safe.length) combatCard = aiStance >= 4 ? CombatCard.BLOCK : pick(safe);
+    const recentFeints = history.slice(-3).filter(h => h.playerCombat === CombatCard.FEINT).length;
+    const attackChance = recentFeints >= 1 ? 0.5 : 0.35;
+    if (Math.random() < attackChance && antiFeint.length) {
+      combatCard = pick(antiFeint);
+    } else if (safe.length) {
+      combatCard = pick(safe);
+    }
+  } else if (aiStance >= 3) {
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    if (safe.length && Math.random() < 0.5) combatCard = pick(safe);
   }
 
   // 僵直惩罚
@@ -744,13 +775,22 @@ function aiLevel8(state) {
   const aiHp = state.ai.hp;
   const playerHp = state.player.hp;
 
-  // 第0优先级：架势极高→必须格挡
-  if (aiStance >= 4 && combatCards.includes(CombatCard.BLOCK)) {
-    combatCard = CombatCard.BLOCK;
+  // 第0优先级：架势极高→防御为主，但预判玩家用擒拿破格挡
+  if (aiStance >= 4) {
+    const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
+    const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
+    // 二阶预判：玩家看到高架势→出擒拿→AI用攻击惩罚
+    const recentFeints = history.slice(-3).filter(h => h.playerCombat === CombatCard.FEINT).length;
+    const attackChance = recentFeints >= 1 ? 0.5 : 0.35;
+    if (Math.random() < attackChance && antiFeint.length) {
+      combatCard = pick(antiFeint);
+    } else if (safe.length) {
+      combatCard = pick(safe);
+    }
   }
   if (!combatCard && aiStance >= 3) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
-    if (safe.length) combatCard = pick(safe);
+    if (safe.length && Math.random() < 0.55) combatCard = pick(safe);
   }
 
   // 僵直→重击（无风险最大伤害）
