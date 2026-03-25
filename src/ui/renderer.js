@@ -7,6 +7,7 @@ import { getActiveTraits, explainCombatMatchup } from '../engine/combat-explain.
 import { buildGuideContent, buildRulesContent } from './tutorial-content.js';
 import { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS,
   buildWeaponZoneStrip, buildWeaponSkillCards } from './weapon-display.js';
+import { isMuted, setMuted, getSfxVolume, setSfxVolume } from './sound.js';
 export { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS };
 
 
@@ -42,6 +43,8 @@ export function renderGame(app, state, selection, uiState, callbacks) {
 
 // ─── Top Bar ───
 function buildTopBar(state, uiState) {
+  const muteBtn = `<button class="ctrl-btn" data-action="togglemute">${isMuted() ? '🔇' : '🔊'}</button>`;
+  const volSlider = `<input type="range" class="vol-slider" data-action="volume" min="0" max="100" value="${Math.round(getSfxVolume() * 100)}" title="音量">`;
   if (uiState.spectator) {
     return `
       <div class="top-bar">
@@ -50,6 +53,7 @@ function buildTopBar(state, uiState) {
           <button class="ctrl-btn" data-action="tutorial">📚 引导</button>
           <button class="ctrl-btn" data-action="newgame">🏠 返回</button>
           <button class="ctrl-btn" data-action="pause">${uiState.isPaused ? '▶️ 继续' : '⏸️ 暂停'}</button>
+          ${muteBtn}${volSlider}
           <span class="round-badge">第 ${state.round + 1} 回合</span>
         </div>
       </div>
@@ -69,6 +73,7 @@ function buildTopBar(state, uiState) {
         <button class="ctrl-btn" data-action="reset">🔄 重置</button>
         <button class="ctrl-btn" data-action="pause">${uiState.isPaused ? '▶️ 继续' : '⏸️ 暂停'}</button>
         <button class="ctrl-btn" data-action="undo" ${!uiState.canUndo ? 'disabled' : ''}>⏪ 回退</button>
+        ${muteBtn}${volSlider}
         <span class="round-badge">第 ${state.round + 1} 回合</span>
       </div>
     </div>
@@ -718,6 +723,12 @@ function bindAllEvents(state, selection, uiState, callbacks) {
 
   document.querySelectorAll('[data-action]').forEach(el => {
     const action = el.dataset.action;
+    if (action === 'volume') {
+      el.addEventListener('input', () => {
+        setSfxVolume(parseInt(el.value) / 100);
+      });
+      return;
+    }
     el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'click', () => {
       switch(action) {
         case 'tutorial': toggleModal('modal-tutorial', true); switchTab('guide'); break;
@@ -726,6 +737,10 @@ function bindAllEvents(state, selection, uiState, callbacks) {
         case 'reset': callbacks.onReset(); break;
         case 'pause': callbacks.onTogglePause(); break;
         case 'undo': callbacks.onUndo(); break;
+        case 'togglemute':
+          setMuted(!isMuted());
+          el.textContent = isMuted() ? '🔇' : '🔊';
+          break;
         case 'difficulty':
           callbacks.onDifficultyChange(parseInt(el.value));
           break;

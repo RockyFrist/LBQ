@@ -459,6 +459,34 @@ html, body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+.vol-slider {
+  width: 60px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #3a4a6c;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold, #d4a843);
+  cursor: pointer;
+}
+.vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold, #d4a843);
+  border: none;
+  cursor: pointer;
+}
 .diff-select {
   padding: 5px 10px;
   border: 1px solid #3a4a6c;

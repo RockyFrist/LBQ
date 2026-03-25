@@ -1,6 +1,7 @@
 import { WEAPON_EMOJI, WEAPON_NAMES, gameConfig } from '../constants.js';
 import { buildWeaponZoneStrip } from '../ui/weapon-display.js';
 import { TOWER_FLOORS, HP_RECOVERY_PER_FLOOR } from './tower.js';
+import { sfxClick, sfxTowerVictory, sfxGameOver } from '../ui/sound.js';
 
 // ═══════ Floor Introduction Screen ═══════
 
@@ -42,8 +43,8 @@ export function renderFloorIntro(app, towerState, floorData, onFight, onBack) {
     </div>
   `;
 
-  document.getElementById('btn-fight').addEventListener('click', onFight);
-  document.getElementById('btn-back').addEventListener('click', onBack);
+  document.getElementById('btn-fight').addEventListener('click', () => { sfxClick(); onFight(); });
+  document.getElementById('btn-back').addEventListener('click', () => { sfxClick(); onBack(); });
 }
 
 // ═══════ Between-Floors Screen ═══════

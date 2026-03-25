@@ -10,6 +10,8 @@ import { renderFloorIntro, renderTowerBetween, renderTowerVictory, renderTowerGa
 import { gameConfig } from './constants.js';
 import { initConfig } from './config.js';
 import { flipState, getValidAction } from './engine/simulation.js';
+import { sfxCardSelect, sfxCardDeselect, sfxConfirm, sfxToastWarn,
+  sfxVictory, sfxDefeat, sfxBattleStart, sfxClick, sfxFloorClear, sfxGameOver } from './ui/sound.js';
 
 // 启动时恢复用户配置
 initConfig();
@@ -87,6 +89,7 @@ function startBattle(playerWeapon, aiWeapon, aiLevel) {
   startConfig = { playerWeapon, aiWeapon, aiLevel };
   resetGameVars();
   gameState = initGame(playerWeapon, aiWeapon, aiLevel);
+  sfxBattleStart();
   render();
 }
 
@@ -115,6 +118,7 @@ function startFloorBattle() {
   // Carry over tower HP
   gameState.player.hp = towerState.playerHp;
   startConfig = null;  // prevent "restart same" in tower mode
+  sfxBattleStart();
   render();
 }
 
@@ -125,11 +129,14 @@ function handleTowerBattleEnd() {
     const prevHp = towerState.playerHp;
     towerState = advanceTowerFloor(towerState, gameState.player.hp);
     if (isTowerComplete(towerState)) {
+      sfxVictory();
       renderTowerVictory(app, towerState, showTitle);
     } else {
+      sfxFloorClear();
       renderTowerBetween(app, towerState, prevHp, showFloorIntro);
     }
   } else {
+    sfxGameOver();
     towerState.gameOver = true;
     renderTowerGameOver(app, towerState, towerFloorData,
       () => startTower(towerState.playerWeapon), showTitle);
@@ -145,9 +152,11 @@ function render() {
 function handleSelect(type, card) {
   if (animating || isPaused || gameState.gameOver) return;
   if (type === 'distance') {
-    selection.distanceCard = selection.distanceCard === card ? null : card;
+    if (selection.distanceCard === card) { sfxCardDeselect(); selection.distanceCard = null; }
+    else { sfxCardSelect(); selection.distanceCard = card; }
   } else {
-    selection.combatCard = selection.combatCard === card ? null : card;
+    if (selection.combatCard === card) { sfxCardDeselect(); selection.combatCard = null; }
+    else { sfxCardSelect(); selection.combatCard = card; }
   }
   render();
 }
@@ -158,9 +167,12 @@ async function handleConfirm() {
 
   const check = validateAction(selection.distanceCard, selection.combatCard, gameState.player, gameState.distance);
   if (!check.valid) {
+    sfxToastWarn();
     showToast(check.reason, 'warn');
     return;
   }
+
+  sfxConfirm();
 
   stateStack.push(JSON.parse(JSON.stringify(gameState)));
   prevState = JSON.parse(JSON.stringify(gameState));
@@ -185,6 +197,7 @@ async function handleConfirm() {
     if (towerState) {
       handleTowerBattleEnd();
     } else {
+      if (gameState.winner === 'player') sfxVictory(); else sfxDefeat();
       renderResult(app, gameState, handleRestartSame, showTitle);
     }
   }
@@ -290,6 +303,7 @@ async function runAutoPlayRound() {
   if (wrapper) wrapper.classList.remove('animating');
 
   if (gameState.gameOver) {
+    if (gameState.winner === 'player') sfxVictory(); else sfxDefeat();
     renderResult(app, gameState, handleRestartSame, showTitle);
   } else {
     scheduleAutoPlay();

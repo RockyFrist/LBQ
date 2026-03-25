@@ -4,6 +4,7 @@ import { buildWeaponZoneStrip, buildWeaponPickCard } from './weapon-display.js';
 import { showSimulationModal } from '../simulator.js';
 import { showConfigModal } from './modals.js';
 import { buildGuideContent, buildRulesContent } from './tutorial-content.js';
+import { sfxClick } from './sound.js';
 
 // ═══════ Title Screen ═══════
 
@@ -37,9 +38,9 @@ export function renderTitleScreen(app, callbacks) {
     </div>
   `;
 
-  document.getElementById('mode-tower').addEventListener('click', callbacks.onTower);
-  document.getElementById('mode-battle').addEventListener('click', callbacks.onBattle);
-  document.getElementById('mode-aivai').addEventListener('click', callbacks.onAiVsAi);
+  document.getElementById('mode-tower').addEventListener('click', () => { sfxClick(); callbacks.onTower(); });
+  document.getElementById('mode-battle').addEventListener('click', () => { sfxClick(); callbacks.onBattle(); });
+  document.getElementById('mode-aivai').addEventListener('click', () => { sfxClick(); callbacks.onAiVsAi(); });
   document.getElementById('btn-title-tutorial').addEventListener('click', () => showTutorialPopup());
   document.getElementById('btn-title-sim').addEventListener('click', () => showSimulationModal());
   document.getElementById('btn-title-config').addEventListener('click', () => showConfigModal());

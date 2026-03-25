@@ -1,6 +1,10 @@
 ﻿import { CombatCard, DistanceCard } from '../types.js';
 import { COMBAT_CARD_NAMES, DISTANCE_CARD_NAMES, DISTANCE_NAMES, gameConfig, DISTANCE_CARD_BASE } from '../constants.js';
 import { COMBAT_CARD_INFO, DISTANCE_CARD_INFO, FIGHTER_POSITIONS } from './weapon-display.js';
+import { sfxRoundStart, sfxDashIn, sfxDashOut, sfxBrace, sfxDodge,
+  sfxSlash, sfxThrust, sfxBlock, sfxDeflect, sfxFeint, sfxClash,
+  sfxHit, sfxExecution, sfxStagger, sfxKnockback,
+  sfxStaminaRecover, sfxStanceUp, sfxStanceDown, sfxForCombatCard } from './sound.js';
 
 // ═══════ Battle Animations ═══════
 
@@ -215,6 +219,7 @@ export async function playRoundAnimation(prevState, newState) {
   const aCombatInfo = COMBAT_CARD_INFO[aCombat];
 
   // ── Phase 0: 回合标题 ──
+  sfxRoundStart();
   showRoundBanner(stage, `⚔️  第 ${newState.round} 回合`);
   await wait(1200);
 
@@ -232,6 +237,7 @@ export async function playRoundAnimation(prevState, newState) {
   const aBeforeMove = parseFloat(aFighter.style.left);
 
   if (pDelta !== 0) {
+    pDelta < 0 ? sfxDashIn() : sfxDashOut();
     pFighter.classList.add(pDelta < 0 ? 'anim-dash-in' : 'anim-dash-out');
     if (Math.abs(pTarget - pCurrLeft) > 0.5) {
       pFighter.style.transition = 'left 0.5s ease';
@@ -245,10 +251,12 @@ export async function playRoundAnimation(prevState, newState) {
     await wait(600);
     pFighter.classList.remove('anim-dash-in', 'anim-dash-out');
   } else if (pDist === DistanceCard.DODGE) {
+    sfxDodge();
     pFighter.classList.add('anim-dodge');
     await wait(550);
     pFighter.classList.remove('anim-dodge');
   } else {
+    sfxBrace();
     pFighter.classList.add('anim-brace');
     if (Math.abs(pTarget - pCurrLeft) > 0.5) {
       pFighter.style.transition = 'left 0.5s ease';
@@ -269,6 +277,7 @@ export async function playRoundAnimation(prevState, newState) {
   const pAfterMove = parseFloat(pFighter.style.left);
 
   if (aDelta !== 0) {
+    aDelta < 0 ? sfxDashIn() : sfxDashOut();
     aFighter.classList.add(aDelta < 0 ? 'anim-dash-in' : 'anim-dash-out');
     if (Math.abs(aTarget - aBeforeMove) > 0.5) {
       aFighter.style.transition = 'left 0.5s ease';
@@ -281,10 +290,12 @@ export async function playRoundAnimation(prevState, newState) {
     await wait(600);
     aFighter.classList.remove('anim-dash-in', 'anim-dash-out');
   } else if (aDist === DistanceCard.DODGE) {
+    sfxDodge();
     aFighter.classList.add('anim-dodge');
     await wait(550);
     aFighter.classList.remove('anim-dodge');
   } else {
+    sfxBrace();
     aFighter.classList.add('anim-brace');
     if (Math.abs(aTarget - aBeforeMove) > 0.5) {
       aFighter.style.transition = 'left 0.5s ease';
@@ -340,6 +351,12 @@ export async function playRoundAnimation(prevState, newState) {
   if (fx.pAnim) pFighter.classList.add(fx.pAnim);
   if (fx.aAnim) aFighter.classList.add(fx.aAnim);
   if (fx.spark) showCenterSpark(stage, fx.spark, fx.desc);
+  // Play combat collision sound
+  if (pCombat === aCombat && (pCombat === 'slash' || pCombat === 'thrust' || pCombat === 'deflect')) {
+    sfxClash();
+  } else {
+    sfxForCombatCard(pCombat);
+  }
 
   await wait(900);
 
@@ -358,6 +375,7 @@ export async function playRoundAnimation(prevState, newState) {
   // ── Phase 2.5: 打断 / 击退 ──
   if (intendedDist !== newState.distance) {
     if (hasInterrupt) {
+      sfxStagger();
       if (last.pMoveInterrupted) {
         pFighter.classList.add('anim-shake');
         showInterruptFlash(stage, pFighter);
@@ -368,6 +386,7 @@ export async function playRoundAnimation(prevState, newState) {
       }
       await wait(400);
     } else {
+      sfxKnockback();
       showCenterSpark(stage, '💥', '击退!');
       await wait(300);
     }
@@ -401,6 +420,7 @@ export async function playRoundAnimation(prevState, newState) {
 
   // ── 3a: 气血伤害逐一揭示 ──
   if (pHpLoss > 0) {
+    sfxHit();
     pFighter.classList.add('anim-hit');
     showFloatDmg(stage, pFighter, `-${pHpLoss}`, 'damage');
     animateBar('.player-side', 'hp', newState.player.hp, MAX_HP, 500);
@@ -409,6 +429,7 @@ export async function playRoundAnimation(prevState, newState) {
     await wait(600);
   }
   if (aHpLoss > 0) {
+    sfxHit();
     aFighter.classList.add('anim-hit');
     showFloatDmg(stage, aFighter, `-${aHpLoss}`, 'damage');
     animateBar('.ai-side', 'hp', newState.ai.hp, MAX_HP, 500);
@@ -421,16 +442,19 @@ export async function playRoundAnimation(prevState, newState) {
   // ── 3b: 架势变化逐一揭示 ──
   if (!pExecuted) {
     if (pStGain > 0) {
+      sfxStanceUp();
       showFloatDmg(stage, pFighter, `+${pStGain} 架势`, 'stance');
       animateBar('.player-side', 'stance', newState.player.stance, MAX_STANCE, 400);
       showBarPop('.player-side', 'stance', `+${pStGain} 架势`, 'warn');
       flashBar('.player-side', 'stance', 'bar-flash-warn');
     } else if (pStGain < 0) {
+      sfxStanceDown();
       showFloatDmg(stage, pFighter, `${pStGain} 架势`, 'heal');
       animateBar('.player-side', 'stance', newState.player.stance, MAX_STANCE, 400);
       showBarPop('.player-side', 'stance', `${pStGain} 架势`, 'buff');
     }
   } else {
+    sfxExecution();
     animateBar('.player-side', 'stance', 0, MAX_STANCE, 400);
     showBarPop('.player-side', 'stance', '⚔ 处决!', 'exec');
   }
@@ -438,16 +462,19 @@ export async function playRoundAnimation(prevState, newState) {
 
   if (!aExecuted) {
     if (aStGain > 0) {
+      sfxStanceUp();
       showFloatDmg(stage, aFighter, `+${aStGain} 架势`, 'stance');
       animateBar('.ai-side', 'stance', newState.ai.stance, MAX_STANCE, 400);
       showBarPop('.ai-side', 'stance', `+${aStGain} 架势`, 'warn');
       flashBar('.ai-side', 'stance', 'bar-flash-warn');
     } else if (aStGain < 0) {
+      sfxStanceDown();
       showFloatDmg(stage, aFighter, `${aStGain} 架势`, 'heal');
       animateBar('.ai-side', 'stance', newState.ai.stance, MAX_STANCE, 400);
       showBarPop('.ai-side', 'stance', `${aStGain} 架势`, 'buff');
     }
   } else {
+    sfxExecution();
     animateBar('.ai-side', 'stance', 0, MAX_STANCE, 400);
     showBarPop('.ai-side', 'stance', '⚔ 处决!', 'exec');
   }
@@ -464,11 +491,13 @@ export async function playRoundAnimation(prevState, newState) {
   const pRecov = newState.player.stamina - pStaminaAfterCost;
   const aRecov = newState.ai.stamina - aStaminaAfterCost;
   if (pRecov > 0) {
+    sfxStaminaRecover();
     animateBar('.player-side', 'stamina', newState.player.stamina, MAX_STAMINA, 400);
     showBarPop('.player-side', 'stamina', `+${pRecov} 体力`, 'buff');
     flashBar('.player-side', 'stamina', 'bar-flash-buff');
   }
   if (aRecov > 0) {
+    if (pRecov <= 0) sfxStaminaRecover();
     animateBar('.ai-side', 'stamina', newState.ai.stamina, MAX_STAMINA, 400);
     showBarPop('.ai-side', 'stamina', `+${aRecov} 体力`, 'buff');
     flashBar('.ai-side', 'stamina', 'bar-flash-buff');
