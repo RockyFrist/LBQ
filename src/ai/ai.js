@@ -117,8 +117,8 @@ function shouldDodge(state, distCards, urgency) {
   const dist = state.distance;
   const playerInAdv = WEAPON_ZONES[playerWeapon]?.advantage.includes(dist);
 
-  // 高架势时闪避逃生
-  if (aiStance >= 3 && Math.random() < urgency + 0.15) return true;
+  // 低架势时闪避逃生
+  if (aiStance <= 2 && Math.random() < urgency + 0.15) return true;
   // 对手在优势区时闪避
   if (playerInAdv && Math.random() < urgency) return true;
   return false;
@@ -252,11 +252,11 @@ function aiLevel3(state) {
   const playerStance = state.player.stance;
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
-  // 自身高架势→防御自保（混合格挡/卸力，避免被擒拿反复刷）
-  if (aiStance >= 4) {
+  // 自身低架势→防御自保（混合格挡/卸力，避免被擒拿反复刷）
+  if (aiStance <= 1) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length && Math.random() < 0.7) combatCard = pick(safe);
-  } else if (aiStance >= 3 && Math.random() < 0.5) {
+  } else if (aiStance <= 2 && Math.random() < 0.5) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length) combatCard = pick(safe);
   }
@@ -267,8 +267,8 @@ function aiLevel3(state) {
     if (atk.length) combatCard = atk[0];
   }
 
-  // 对手高架势→施压
-  if (!combatCard && playerStance >= 3) {
+  // 对手低架势→施压
+  if (!combatCard && playerStance <= 2) {
     const pressure = [CombatCard.THRUST, CombatCard.FEINT].filter(c => combatCards.includes(c));
     if (pressure.length) combatCard = pick(pressure);
   }
@@ -318,11 +318,11 @@ function aiLevel4(state) {
   const playerStance = state.player.stance;
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
-  // 高架势→防御自保（混合选择避免可预测）
-  if (aiStance >= 4) {
+  // 低架势→防御自保（混合选择避免可预测）
+  if (aiStance <= 1) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length && Math.random() < 0.75) combatCard = pick(safe);
-  } else if (aiStance >= 3) {
+  } else if (aiStance <= 2) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length && Math.random() < 0.55) combatCard = pick(safe);
   }
@@ -332,8 +332,8 @@ function aiLevel4(state) {
     if (combatCards.includes(CombatCard.SLASH)) combatCard = CombatCard.SLASH;
   }
 
-  // 对手高架势→施压处决
-  if (!combatCard && playerStance >= 3) {
+  // 对手低架势→施压处决
+  if (!combatCard && playerStance <= 2) {
     const pressure = [CombatCard.THRUST, CombatCard.FEINT, CombatCard.SLASH].filter(c => combatCards.includes(c));
     if (pressure.length) combatCard = pressure[0];
   }
@@ -412,9 +412,9 @@ function aiLevel5(state) {
   const playerStance = state.player.stance;
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
-  // 高架势→防御自保（高级AI预判玩家会出擒拿破格挡，混入攻击反制）
-  if (aiStance >= 4) {
-    // 预判玩家看到高架势会出擒拿→用重击/轻击惩罚
+  // 低架势→防御自保（高级AI预判玩家会出擒拿破格挡，混入攻击反制）
+  if (aiStance <= 1) {
+    // 预判玩家看到低架势会出擒拿→用重击/轻击惩罚
     const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (Math.random() < 0.35 && antiFeint.length) {
@@ -422,7 +422,7 @@ function aiLevel5(state) {
     } else if (safe.length) {
       combatCard = pick(safe);
     }
-  } else if (aiStance >= 3) {
+  } else if (aiStance <= 2) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length && Math.random() < 0.6) combatCard = pick(safe);
   }
@@ -432,8 +432,8 @@ function aiLevel5(state) {
     if (combatCards.includes(CombatCard.SLASH)) combatCard = CombatCard.SLASH;
   }
 
-  // 对手高架势→精准施压
-  if (!combatCard && playerStance >= 3) {
+  // 对手低架势→精准施压
+  if (!combatCard && playerStance <= 2) {
     const pressure = [CombatCard.FEINT, CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     if (pressure.length) combatCard = pressure[0];
   }
@@ -525,8 +525,8 @@ function aiLevel6(state) {
   const aiStance = state.ai.stance;
   const playerStance = state.player.stance;
 
-  // 高架势→防御（高手AI预判玩家反套路，不固定格挡）
-  if (aiStance >= 4) {
+  // 低架势→防御（高手AI预判玩家反套路，不固定格挡）
+  if (aiStance <= 1) {
     // 高手知道玩家会用擒拿打格挡，所以混入攻击反制
     const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
@@ -538,7 +538,7 @@ function aiLevel6(state) {
     } else if (safe.length) {
       combatCard = pick(safe);
     }
-  } else if (aiStance >= 3) {
+  } else if (aiStance <= 2) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length && Math.random() < 0.55) combatCard = pick(safe);
   }
@@ -548,8 +548,8 @@ function aiLevel6(state) {
     combatCard = combatCards.includes(CombatCard.SLASH) ? CombatCard.SLASH : null;
   }
 
-  // 高架势施压
-  if (!combatCard && playerStance >= 3) {
+  // 低架势施压
+  if (!combatCard && playerStance <= 2) {
     const pressure = [CombatCard.FEINT, CombatCard.THRUST, CombatCard.SLASH].filter(c => combatCards.includes(c));
     if (pressure.length) combatCard = pressure[0];
   }
@@ -642,8 +642,8 @@ function aiLevel7(state) {
     aiRepeat = last2ai[0] === last2ai[1];
   }
 
-  // 高架势→防御（宗师AI反读心：玩家看到高架势会出擒拿，AI反制）
-  if (aiStance >= 4) {
+  // 低架势→防御（宗师AI反读心：玩家看到低架势会出擒拿，AI反制）
+  if (aiStance <= 1) {
     const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     const recentFeints = history.slice(-3).filter(h => h.playerCombat === CombatCard.FEINT).length;
@@ -653,7 +653,7 @@ function aiLevel7(state) {
     } else if (safe.length) {
       combatCard = pick(safe);
     }
-  } else if (aiStance >= 3) {
+  } else if (aiStance <= 2) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length && Math.random() < 0.5) combatCard = pick(safe);
   }
@@ -664,7 +664,7 @@ function aiLevel7(state) {
   }
 
   // 处决压力
-  if (!combatCard && playerStance >= 3) {
+  if (!combatCard && playerStance <= 2) {
     const pressure = [CombatCard.FEINT, CombatCard.THRUST, CombatCard.SLASH].filter(c => combatCards.includes(c));
     if (pressure.length) combatCard = pressure[0];
   }
@@ -747,13 +747,13 @@ function aiLevel8(state) {
 
   if (!distCard) {
     // 体力管理：极低体力+不在危险处→扎马
-    if (state.ai.stamina <= 1 && !playerInAdv && state.ai.stance < 3) {
+    if (state.ai.stamina <= 1 && !playerInAdv && state.ai.stance > 2) {
       distCard = DistanceCard.HOLD;
     }
   }
 
   if (!distCard) {
-    // 高架势时闪避逃生（更积极）
+    // 低架势时闪避逃生（更积极）
     if (shouldDodge(state, distCards, 0.45)) {
       distCard = DistanceCard.DODGE;
     }
@@ -775,11 +775,11 @@ function aiLevel8(state) {
   const aiHp = state.ai.hp;
   const playerHp = state.player.hp;
 
-  // 第0优先级：架势极高→防御为主，但预判玩家用擒拿破格挡
-  if (aiStance >= 4) {
+  // 第0优先级：架势极低→防御为主，但预判玩家用擒拿破格挡
+  if (aiStance <= 1) {
     const antiFeint = [CombatCard.SLASH, CombatCard.THRUST].filter(c => combatCards.includes(c));
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
-    // 二阶预判：玩家看到高架势→出擒拿→AI用攻击惩罚
+    // 二阶预判：玩家看到低架势→出擒拿→AI用攻击惩罚
     const recentFeints = history.slice(-3).filter(h => h.playerCombat === CombatCard.FEINT).length;
     const attackChance = recentFeints >= 1 ? 0.5 : 0.35;
     if (Math.random() < attackChance && antiFeint.length) {
@@ -788,7 +788,7 @@ function aiLevel8(state) {
       combatCard = pick(safe);
     }
   }
-  if (!combatCard && aiStance >= 3) {
+  if (!combatCard && aiStance <= 2) {
     const safe = [CombatCard.BLOCK, CombatCard.DEFLECT].filter(c => combatCards.includes(c));
     if (safe.length && Math.random() < 0.55) combatCard = pick(safe);
   }
@@ -807,8 +807,8 @@ function aiLevel8(state) {
     }
   }
 
-  // 对手高架势→精准施压
-  if (!combatCard && playerStance >= 3) {
+  // 对手低架势→精准施压
+  if (!combatCard && playerStance <= 2) {
     const pressure = [CombatCard.FEINT, CombatCard.THRUST, CombatCard.SLASH].filter(c => combatCards.includes(c));
     if (pressure.length) combatCard = pressure[0];
   }
@@ -865,7 +865,7 @@ function aiLevel8(state) {
     if (others.length) {
       const weights = others.map(c => {
         if (CARD_TYPE_MAP[c] === CardType.ATTACK && isAdvantage(weapon, dist)) return 3;
-        if (c === CombatCard.BLOCK && aiStance >= 2) return 2;
+        if (c === CombatCard.BLOCK && aiStance <= 3) return 2;
         return 1;
       });
       combatCard = weightedPick(others, weights);

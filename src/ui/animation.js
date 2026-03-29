@@ -415,8 +415,8 @@ export async function playRoundAnimation(prevState, newState) {
   const pStGain = newState.player.stance - prevState.player.stance;
   const aStGain = newState.ai.stance - prevState.ai.stance;
   const EXEC_DMG = gameConfig.EXECUTION_DAMAGE;
-  const pExecuted = prevState.player.stance < MAX_STANCE && newState.player.stance === 0 && pHpLoss >= EXEC_DMG;
-  const aExecuted = prevState.ai.stance < MAX_STANCE && newState.ai.stance === 0 && aHpLoss >= EXEC_DMG;
+  const pExecuted = prevState.player.stance > 0 && newState.player.stance === MAX_STANCE && pHpLoss >= EXEC_DMG;
+  const aExecuted = prevState.ai.stance > 0 && newState.ai.stance === MAX_STANCE && aHpLoss >= EXEC_DMG;
 
   // ── 3a: 气血伤害逐一揭示 ──
   if (pHpLoss > 0) {
@@ -441,41 +441,41 @@ export async function playRoundAnimation(prevState, newState) {
 
   // ── 3b: 架势变化逐一揭示 ──
   if (!pExecuted) {
-    if (pStGain > 0) {
+    if (pStGain < 0) {
       sfxStanceUp();
-      showFloatDmg(stage, pFighter, `+${pStGain} 架势`, 'stance');
+      showFloatDmg(stage, pFighter, `${pStGain} 架势`, 'stance');
       animateBar('.player-side', 'stance', newState.player.stance, MAX_STANCE, 400);
-      showBarPop('.player-side', 'stance', `+${pStGain} 架势`, 'warn');
+      showBarPop('.player-side', 'stance', `${pStGain} 架势`, 'warn');
       flashBar('.player-side', 'stance', 'bar-flash-warn');
-    } else if (pStGain < 0) {
+    } else if (pStGain > 0) {
       sfxStanceDown();
-      showFloatDmg(stage, pFighter, `${pStGain} 架势`, 'heal');
+      showFloatDmg(stage, pFighter, `+${pStGain} 架势`, 'heal');
       animateBar('.player-side', 'stance', newState.player.stance, MAX_STANCE, 400);
-      showBarPop('.player-side', 'stance', `${pStGain} 架势`, 'buff');
+      showBarPop('.player-side', 'stance', `+${pStGain} 架势`, 'buff');
     }
   } else {
     sfxExecution();
-    animateBar('.player-side', 'stance', 0, MAX_STANCE, 400);
+    animateBar('.player-side', 'stance', MAX_STANCE, MAX_STANCE, 400);
     showBarPop('.player-side', 'stance', '⚔ 处决!', 'exec');
   }
   if (pExecuted || pStGain !== 0) await wait(450);
 
   if (!aExecuted) {
-    if (aStGain > 0) {
+    if (aStGain < 0) {
       sfxStanceUp();
-      showFloatDmg(stage, aFighter, `+${aStGain} 架势`, 'stance');
+      showFloatDmg(stage, aFighter, `${aStGain} 架势`, 'stance');
       animateBar('.ai-side', 'stance', newState.ai.stance, MAX_STANCE, 400);
-      showBarPop('.ai-side', 'stance', `+${aStGain} 架势`, 'warn');
+      showBarPop('.ai-side', 'stance', `${aStGain} 架势`, 'warn');
       flashBar('.ai-side', 'stance', 'bar-flash-warn');
-    } else if (aStGain < 0) {
+    } else if (aStGain > 0) {
       sfxStanceDown();
-      showFloatDmg(stage, aFighter, `${aStGain} 架势`, 'heal');
+      showFloatDmg(stage, aFighter, `+${aStGain} 架势`, 'heal');
       animateBar('.ai-side', 'stance', newState.ai.stance, MAX_STANCE, 400);
       showBarPop('.ai-side', 'stance', `${aStGain} 架势`, 'buff');
     }
   } else {
     sfxExecution();
-    animateBar('.ai-side', 'stance', 0, MAX_STANCE, 400);
+    animateBar('.ai-side', 'stance', MAX_STANCE, MAX_STANCE, 400);
     showBarPop('.ai-side', 'stance', '⚔ 处决!', 'exec');
   }
   if (aExecuted || aStGain !== 0) await wait(450);

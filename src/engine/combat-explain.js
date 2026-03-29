@@ -24,7 +24,7 @@ export function getActiveTraits(weapon, dist) {
       break;
     case WeaponType.SPEAR:
       if (adv) {
-        traits.push({ icon: '🔱', text: '重击+2伤+额外架势', cls: 'trait-buff' });
+        traits.push({ icon: '🔱', text: '重击+2伤+额外扣架势', cls: 'trait-buff' });
         traits.push({ icon: '🛡️', text: '格挡弹枪推1距', cls: 'trait-buff' });
       }
       if (dist === 0) traits.push({ icon: '⚠', text: '重击几乎无效', cls: 'trait-nerf' });
@@ -39,10 +39,10 @@ export function getActiveTraits(weapon, dist) {
       break;
     case WeaponType.STAFF:
       if (adv) {
-        traits.push({ icon: '🏑', text: '擒拿+3架势', cls: 'trait-buff' });
+        traits.push({ icon: '🏑', text: '擒拿-3架势', cls: 'trait-buff' });
         traits.push({ icon: '↗', text: '擒拿破格挡→推距', cls: 'trait-buff' });
-        traits.push({ icon: '⚡', text: '重击额外+2架势', cls: 'trait-buff' });
-        traits.push({ icon: '🛡️', text: '格挡震退+1架势', cls: 'trait-buff' });
+        traits.push({ icon: '⚡', text: '重击额外-2架势', cls: 'trait-buff' });
+        traits.push({ icon: '🛡️', text: '格挡震退-1架势', cls: 'trait-buff' });
       }
       if (dist === 0) traits.push({ icon: '⚠', text: '重击几乎无效', cls: 'trait-nerf' });
       break;
@@ -57,8 +57,8 @@ export function getActiveTraits(weapon, dist) {
     case WeaponType.DUAL_STAB:
       if (adv) {
         traits.push({ icon: '🥢', text: '轻击追击+1伤', cls: 'trait-buff' });
-        traits.push({ icon: '💨', text: '闪避→对手+2架势', cls: 'trait-buff' });
-        traits.push({ icon: '✦', text: '命中额外+1架势', cls: 'trait-buff' });
+        traits.push({ icon: '💨', text: '闪避→对手-2架势', cls: 'trait-buff' });
+        traits.push({ icon: '✦', text: '命中额外-1架势', cls: 'trait-buff' });
       }
       if (disadv) traits.push({ icon: '⚠', text: '重击几乎无效', cls: 'trait-nerf' });
       break;
@@ -84,13 +84,13 @@ export function explainCombatMatchup(pCard, aCard, pW, aW, dist) {
         lines.push('双方出了相同的牌 → <strong>空过</strong>，无事发生');
         break;
       case CombatCard.DEFLECT:
-        lines.push('卸力对碰 → <strong>双方各+2架势</strong>');
+        lines.push('卸力对碰 → <strong>双方各-2架势</strong>');
         break;
       case CombatCard.SLASH:
-        lines.push('互砍 → <strong>双方各受重击伤害+1架势</strong>');
+        lines.push('互砍 → <strong>双方各受重击伤害-1架势</strong>');
         break;
       case CombatCard.THRUST:
-        lines.push('互刺 → <strong>双方各受轻击伤害+1架势</strong>');
+        lines.push('互刺 → <strong>双方各受轻击伤害-1架势</strong>');
         break;
     }
     return lines;
@@ -117,14 +117,14 @@ export function explainCombatMatchup(pCard, aCard, pW, aW, dist) {
 function explainPair(lines, attacker, defender, aWeapon, dWeapon, dist, label) {
   if (attacker === CombatCard.DEFLECT) {
     if (defender === CombatCard.SLASH) {
-      lines.push(`${label}卸力 vs 重击 → <strong>卸力反制成功！</strong>重击方受2伤+2架势+僵直`);
-      if (aWeapon === 'sword') lines.push(`（⚔️ 剑的卸力：不造成僵直，改为自身-2架势）`);
+      lines.push(`${label}卸力 vs 重击 → <strong>卸力反制成功！</strong>重击方受2伤-2架势+僵直`);
+      if (aWeapon === 'sword') lines.push(`（⚔️ 剑的卸力：不造成僵直，改为自身+2架势）`);
     } else if (defender === CombatCard.THRUST) {
-      lines.push(`${label}卸力 vs 轻击 → <strong>卸力失败</strong>（轻击穿透卸力），卸力方受轻击伤害+1架势`);
+      lines.push(`${label}卸力 vs 轻击 → <strong>卸力失败</strong>（轻击穿透卸力），卸力方受轻击伤害-1架势`);
     } else if (defender === CombatCard.FEINT) {
-      lines.push(`${label}卸力 vs 擒拿 → <strong>卸力识破！</strong>擒拿方+2架势`);
+      lines.push(`${label}卸力 vs 擒拿 → <strong>卸力识破！</strong>擒拿方-2架势`);
     } else if (defender === CombatCard.BLOCK) {
-      lines.push(`${label}卸力 vs 格挡 → <strong>卸力落空</strong>，卸力方+1架势`);
+      lines.push(`${label}卸力 vs 格挡 → <strong>卸力落空</strong>，卸力方-1架势`);
     }
   } else if (attacker === CombatCard.SLASH) {
     const baseDmg = COMBAT_CARD_BASE[CombatCard.SLASH].damage;
@@ -132,17 +132,17 @@ function explainPair(lines, attacker, defender, aWeapon, dWeapon, dist, label) {
     const dmg = Math.max(0, baseDmg + mod);
     const dmgNote = mod < 0 ? `（势区惩罚${mod}，实际${dmg}伤）` : '';
     if (defender === CombatCard.THRUST) {
-      lines.push(`${label}重击 vs 轻击 → <strong>重击克制轻击！</strong>轻击方受${dmg}伤+1架势${dmgNote}`);
+      lines.push(`${label}重击 vs 轻击 → <strong>重击克制轻击！</strong>轻击方受${dmg}伤-1架势${dmgNote}`);
     } else if (defender === CombatCard.BLOCK) {
       const reduction = getBlockSlashReduction(dWeapon, dist);
       if (isBlockPerfect(dWeapon, dist)) {
         lines.push(`${label}重击 vs 格挡 → <strong>完美格挡！</strong>格挡方完全免伤${dmgNote}`);
       } else {
         const afterBlock = Math.max(0, dmg - reduction);
-        lines.push(`${label}重击 vs 格挡 → <strong>重击破格挡</strong>，格挡方减免${reduction}伤后受${afterBlock}伤+1架势${dmgNote}`);
+        lines.push(`${label}重击 vs 格挡 → <strong>重击破格挡</strong>，格挡方减免${reduction}伤后受${afterBlock}伤-1架势${dmgNote}`);
       }
     } else if (defender === CombatCard.FEINT) {
-      lines.push(`${label}重击 vs 擒拿 → <strong>重击命中！</strong>擒拿方受${dmg}伤+1架势${dmgNote}`);
+      lines.push(`${label}重击 vs 擒拿 → <strong>重击命中！</strong>擒拿方受${dmg}伤-1架势${dmgNote}`);
     }
   } else if (attacker === CombatCard.THRUST) {
     const baseDmg = COMBAT_CARD_BASE[CombatCard.THRUST].damage;
@@ -152,11 +152,11 @@ function explainPair(lines, attacker, defender, aWeapon, dWeapon, dist, label) {
     if (defender === CombatCard.BLOCK) {
       lines.push(`${label}轻击 vs 格挡 → <strong>格挡完全抵消</strong>轻击，无伤害`);
     } else if (defender === CombatCard.FEINT) {
-      lines.push(`${label}轻击 vs 擒拿 → <strong>轻击命中！</strong>擒拿方受${dmg}伤+1架势${dmgNote}`);
+      lines.push(`${label}轻击 vs 擒拿 → <strong>轻击命中！</strong>擒拿方受${dmg}伤-1架势${dmgNote}`);
     }
   } else if (attacker === CombatCard.BLOCK) {
     if (defender === CombatCard.FEINT) {
-      lines.push(`${label}格挡 vs 擒拿 → <strong>格挡被擒拿骗</strong>，格挡方+3架势`);
+      lines.push(`${label}格挡 vs 擒拿 → <strong>格挡被擒拿骗</strong>，格挡方-3架势`);
     }
   }
 }

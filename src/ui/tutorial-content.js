@@ -22,20 +22,20 @@ export function buildGuideContent() {
     <h4>⚔️ 5张攻防卡 · 一句话说明</h4>
     <table class="tutorial-table">
       <tr><th>卡牌</th><th>类型</th><th>一句话</th></tr>
-      <tr><td>🤺 卸力</td><td>防守</td><td>克重击(反打2伤+僵直)＋识破擒拿(对手+2架势)。遇其他牌吃亏</td></tr>
+      <tr><td>🤺 卸力</td><td>防守</td><td>克重击(反打2伤+僵直)＋识破擒拿(对手-2架势)。遇其他牌吃亏</td></tr>
       <tr><td>⚡ 重击</td><td>攻击</td><td>重击3伤，克制轻击和擒拿，但怕卸力</td></tr>
       <tr><td>🎯 轻击</td><td>攻击</td><td>快攻1伤，穿透卸力，但被重击完克、被格挡抵消</td></tr>
-      <li><strong>🛡️ 格挡</strong></td><td>防守</td><td>完全挡住轻击，减1点重击伤害，但被擒拿骗+3架势</li>
-      <tr><td>🌀 擒拿</td><td>攻击</td><td>0伤害但给对手+3架势，克格挡和闪避，怕重击和卸力</td></tr>
+      <li><strong>🛡️ 格挡</strong></td><td>防守</td><td>完全挡住轻击，减1点重击伤害，但被擒拿骗-3架势</li>
+      <tr><td>🌀 擒拿</td><td>攻击</td><td>0伤害但给对手-3架势，克格挡和闪避，怕重击和卸力</td></tr>
     </table>
 
     <h4>🔄 核心克制链 · 记住这个就够了</h4>
     <div class="tutorial-chain">
       <p><strong>⚡重击</strong> → 克 → 🎯轻击、🌀擒拿、🛡️格挡(破防)</p>
       <p><strong>🎯轻击</strong> → 克 → 🤺卸力、🌀擒拿</p>
-      <p><strong>🤺卸力</strong> → 克 → ⚡重击 (反制2伤+僵直)、🌀擒拿 (识破+2架势)</p>
+      <p><strong>🤺卸力</strong> → 克 → ⚡重击 (反制2伤+僵直)、🌀擒拿 (识破-2架势)</p>
       <p><strong>🛡️格挡</strong> → 克 → 🎯轻击 (完全抵消)</p>
-      <p><strong>🌀擒拿</strong> → 克 → 🛡️格挡 (骗出+3架势)、💨闪避 (穿透闪避)</p>
+      <p><strong>🌀擒拿</strong> → 克 → 🛡️格挡 (骗出-3架势)、💨闪避 (穿透闪避)</p>
       <p><strong>💨闪避</strong>(身法卡) → 闪开对手重击/轻击，但<strong>无法闪避擒拿</strong>，同时自己的攻防卡照常生效</p>
     </div>
 
@@ -46,8 +46,8 @@ export function buildGuideContent() {
       <li><strong>擒拿穿透闪避</strong>：对手出擒拿时，你的闪避会<strong>落空</strong>！体力白耗。</li>
       <li><strong>闪避被打断</strong>：对手在<strong>优势区使用轻击</strong>可以打断闪避，且你的攻防卡也会被<strong>连带取消</strong>（级联打断）。</li>
       <li><strong>身法打断</strong>：如果你在移动（冲步/撤步）的同时被攻击命中扣血，你的移动会被<strong>取消</strong>！距离回到移动前的位置。</li>
-      <li><strong>劣势区架势减半</strong>：在劣势区攻击时，造成的架势效果<strong>减半</strong>（向下取整）。劣势区进攻只能割血，无法有效累积架势。</li>
-      <li><strong>架势 → 处决</strong>：架势累计到5点自动触发「处决」<strong>扣5血</strong>，然后架势清零。管好架势比管血更重要！</li>
+      <li><strong>劣势区架势减半</strong>：在劣势区攻击时，造成的架势效果<strong>减半</strong>（向下取整）。劣势区进攻只能割血，无法有效削减架势。</li>
+      <li><strong>架势 → 处决</strong>：架势被削减到0点自动触发「处决」<strong>扣5血</strong>，然后架势恢复满。管好架势比管血更重要！</li>
       <li><strong>僵直</strong>：被卸力反制后下回合<strong>所有攻击卡禁用</strong>，只能防守。</li>
       <li><strong>体力限制</strong>：体力上限4，每回合恢复1（扎马恢复2）。冲步/撤步/闪避消耗体力，体力不够则无法使用。</li>
     </ul>
@@ -55,11 +55,11 @@ export function buildGuideContent() {
     <h4>🏹 兵器一览</h4>
     <ul>
       <li><strong>� 短刀</strong>：优势区0-1 | 轻击破闪避，闪避反击1伤，闪避仅耗1体力 | 远距重击几乎无效</li>
-      <li><strong>🔱 长枪</strong>：优势区2-3 | 重击+2伤，重击额外+1架势，格挡弹枪推1距 | 贴身重击几乎无力</li>
-      <li><strong>⚔️ 剑</strong>：优势区1-2 | 卸力不僵直改为自身-2架势，完美格挡(重击免伤) | 贴身/远距重击削弱</li>
-      <li><strong>🏏 棍</strong>：优势区1-3(最广) | 擒拿+3架势+推距，重击额外+2架势，格挡震退+1架势 | 贴身重击无力</li>
+      <li><strong>🔱 长枪</strong>：优势区2-3 | 重击+2伤，重击额外-1架势，格挡弹枪推1距 | 贴身重击几乎无力</li>
+      <li><strong>⚔️ 剑</strong>：优势区1-2 | 卸力不僵直改为自身+2架势，完美格挡(重击免伤) | 贴身/远距重击削弱</li>
+      <li><strong>🏏 棍</strong>：优势区1-3(最广) | 擒拿-3架势+推距，重击额外-2架势，格挡震退-1架势 | 贴身重击无力</li>
       <li><strong>🪓 大刀</strong>：优势区仅2 | 重击+3伤(全场最高)+推1距，格挡额外减伤 | 贴身重击无力</li>
-      <li><strong>🥢 双刺</strong>：优势区仅0 | 贴身轻击追击+1伤，闪避+2架势，闪避仅耗1体力，贴身命中+1架势 | 远距攻击大幅削弱</li>
+      <li><strong>🥢 双刺</strong>：优势区仅0 | 贴身轻击追击+1伤，闪避-2架势，闪避仅耜1体力，贴身命中-1架势 | 远距攻击大幅削弱</li>
     </ul>
 
     <h4>💡 操作提示</h4>
@@ -89,7 +89,7 @@ export function buildRulesContent() {
       <li><strong>身法先结算</strong> → 得到新距离</li>
       <li><strong>攻防在新距离上结算</strong> → 伤害/架势变化</li>
       <li><strong>身法打断判定</strong>：受到HP伤害的一方，如果本回合有移动（冲步/撤步），移动被<strong>取消回退</strong></li>
-      <li><strong>状态结算</strong>：检查架势是否≥5触发处决，检查HP</li>
+      <li><strong>状态结算</strong>：检查架势是否≤0触发处决，检查HP</li>
       <li><strong>回合结束</strong>：体力恢复（基础+1，扎马额外+1）</li>
     </ol>
 
@@ -116,10 +116,10 @@ export function buildRulesContent() {
 
     <h4>🎭 架势 · 处决 · 僵直</h4>
     <ul>
-      <li>被攻击/擒拿命中 → 架势值累加</li>
-      <li>架势值<strong>≥5</strong>时立即触发「处决」：<strong>扣5血</strong>，架势归零</li>
+      <li>被攻击/擒拿命中 → 架势值减少</li>
+      <li>架势值<strong>≤0</strong>时立即触发「处决」：<strong>扣5血</strong>，架势恢复满</li>
       <li>被卸力反制 → 进入<strong>僵直</strong>（下回合所有攻击卡禁用）</li>
-      <li>剑的卸力例外：成功后<strong>不造成僵直</strong>，改为自身架势-2</li>
+      <li>剑的卸力例外：成功后<strong>不造成僵直</strong>，改为自身架势+2</li>
     </ul>
 
     <h4>💪 体力系统</h4>

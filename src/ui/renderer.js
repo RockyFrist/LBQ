@@ -128,7 +128,7 @@ function buildStatBars(p, side) {
   return `
     ${buildOneBar('❤️ 气血', 'hp', p.hp, MAX_HP)}
     ${buildOneBar('💨 体力', 'stamina', p.stamina, MAX_STAMINA, false)}
-    ${buildOneBar('⚡ 架势', 'stance', p.stance, MAX_STANCE, p.stance >= 4)}
+    ${buildOneBar('⚡ 架势', 'stance', p.stance, MAX_STANCE, p.stance <= 1)}
   `;
 }
 
@@ -261,10 +261,10 @@ function buildSituationHint(state) {
     hints.push('❌ 你在劣势区，攻击受削弱！');
   }
 
-  if (p.stance >= 4) {
-    hints.push('🔴 你架势快满了！被攻击可能触发处决(-5血)');
-  } else if (ai.stance >= 4) {
-    hints.push('🟢 对手架势快满了！攻击/擒拿可触发处决');
+  if (p.stance <= 1) {
+    hints.push('🔴 你架势快空了！被攻击可能触发处决(-5血)');
+  } else if (ai.stance <= 1) {
+    hints.push('🟢 对手架势快空了！攻击/擒拿可触发处决');
   }
 
   if (p.stamina <= 1) {

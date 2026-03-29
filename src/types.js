@@ -50,7 +50,7 @@ export function createPlayerState(weapon) {
   return {
     weapon,
     hp: 10,
-    stance: 0,
+    stance: 5,
     stamina: 4,
     staggered: false,
   };

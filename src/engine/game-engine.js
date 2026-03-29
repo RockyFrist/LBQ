@@ -98,10 +98,10 @@ function stepCombatResolve(s, pCombat, aCombat) {
           aDodgeDmgToAi -= counterDmg;
           s.log.push(`🗡️ 闪避反击！AI受${counterDmg}伤`);
         }
-        // 双刺闪避+2架势
+        // 双刺闪避-2架势
         if (s.player.weapon === 'dual_stab') {
-          s.ai.stance += 2;
-          s.log.push('🥢 双刺闪避成功：AI+2架势');
+          s.ai.stance -= 2;
+          s.log.push('🥢 双刺闪避成功：AI-2架势');
         }
       }
     } else {
@@ -127,8 +127,8 @@ function stepCombatResolve(s, pCombat, aCombat) {
           s.log.push(`🗡️ 闪避反击！玩家受${counterDmg}伤`);
         }
         if (s.ai.weapon === 'dual_stab') {
-          s.player.stance += 2;
-          s.log.push('🥢 双刺闪避成功：玩家+2架势');
+          s.player.stance -= 2;
+          s.log.push('🥢 双刺闪避成功：玩家-2架势');
         }
       }
     } else {
@@ -139,8 +139,9 @@ function stepCombatResolve(s, pCombat, aCombat) {
   // 确定有效攻防卡
   let effectiveP = pCascade ? null : pCombat;
   let effectiveA = aCascade ? null : aCombat;
-  if (pDodgeSuccess) effectiveA = null; // 闪避成功→对手攻击无效
-  if (aDodgeSuccess) effectiveP = null;
+  // 修正：只有非擒拿攻击被闪避时才置空，擒拿穿透闪避时不置空
+  if (pDodgeSuccess && aCombat !== 'feint') effectiveA = null; // 闪避成功→对手攻击无效（但擒拿不被闪避）
+  if (aDodgeSuccess && pCombat !== 'feint') effectiveP = null;
 
   // ═══════ 攻防结算 ═══════
   let effects;
@@ -159,23 +160,23 @@ function stepCombatResolve(s, pCombat, aCombat) {
 
   s.player.hp += effects.player.hpChange;
   s.ai.hp += effects.ai.hpChange;
-  s.player.stance += effects.player.stanceChange;
-  s.ai.stance += effects.ai.stanceChange;
+  s.player.stance -= effects.player.stanceChange;
+  s.ai.stance -= effects.ai.stanceChange;
 
   if (effects.player.staggered) s.player.staggered = true;
   if (effects.ai.staggered) s.ai.staggered = true;
 
-  // 双刺贴身命中加成：距离0时，卡牌生效则额外+1架势
+  // 双刺贴身命中加成：距离0时，卡牌生效则额外-1架势
   if (s.distance === 0) {
     if (s.player.weapon === 'dual_stab' &&
         (effects.ai.hpChange < 0 || effects.ai.stanceChange > 0 || effects.ai.staggered)) {
-      s.ai.stance += 1;
-      s.log.push('🥢 双刺贴身命中：AI额外+1架势');
+      s.ai.stance -= 1;
+      s.log.push('🥢 双刺贴身命中：AI额外-1架势');
     }
     if (s.ai.weapon === 'dual_stab' &&
         (effects.player.hpChange < 0 || effects.player.stanceChange > 0 || effects.player.staggered)) {
-      s.player.stance += 1;
-      s.log.push('🥢 双刺贴身命中：玩家额外+1架势');
+      s.player.stance -= 1;
+      s.log.push('🥢 双刺贴身命中：玩家额外-1架势');
     }
   }
 
@@ -229,17 +230,17 @@ function stepStatusResolve(s) {
   const MAX_STANCE = gameConfig.MAX_STANCE;
   const EXECUTION_DAMAGE = gameConfig.EXECUTION_DAMAGE;
 
-  s.player.stance = Math.max(0, s.player.stance);
-  s.ai.stance = Math.max(0, s.ai.stance);
+  s.player.stance = Math.min(MAX_STANCE, s.player.stance);
+  s.ai.stance = Math.min(MAX_STANCE, s.ai.stance);
 
-  if (s.player.stance >= MAX_STANCE) {
+  if (s.player.stance <= 0) {
     s.player.hp -= EXECUTION_DAMAGE;
-    s.player.stance = 0;
+    s.player.stance = MAX_STANCE;
     s.log.push(`⚔ 玩家被处决！-${EXECUTION_DAMAGE}气血`);
   }
-  if (s.ai.stance >= MAX_STANCE) {
+  if (s.ai.stance <= 0) {
     s.ai.hp -= EXECUTION_DAMAGE;
-    s.ai.stance = 0;
+    s.ai.stance = MAX_STANCE;
     s.log.push(`⚔ AI被处决！-${EXECUTION_DAMAGE}气血`);
   }
 
